@@ -1,0 +1,526 @@
+﻿<Window x:Name="MainWindow1" x:Class="GymnasticsVideoGallery.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"       
+        xmlns:s="clr-namespace:System;assembly=mscorlib"
+        xmlns:gymnasticsvideogallery="clr-namespace:GymnasticsVideoGallery"
+        mc:Ignorable="d"
+        Title="Gymnastics Video Gallery" Height="394" Width="700" Background="Gray" Drop="MainWindow1_Drop" DragEnter="MainWindow1_DragEnter" DragLeave="MainWindow1_DragLeave" DragOver="MainWindow1_DragOver" AllowDrop="True" PreviewKeyDown="MainWindow1_PreviewKeyDown" PreviewMouseMove="MainWindow1_MouseMove" PreviewMouseWheel="Grid_MouseWheel" PreviewMouseDown="MainWindow1_PreviewMouseDown" PreviewMouseUp="MainWindow1_PreviewMouseUp" Activated="MainWindow1_Activated" Loaded="MainWindow1_Loaded" PreviewMouseLeftButtonUp="MainWindow1_PreviewMouseLeftButtonUp" SizeChanged="MainWindow1_SizeChanged" LocationChanged="MainWindow1_LocationChanged" StateChanged="MainWindow1_StateChanged">
+    <!--xmlns:mwt="clr-namespace:Microsoft.Windows.Themes;assembly=PresentationFramework.Aero2"-->
+    <Window.Resources>
+        <gymnasticsvideogallery:SettingDimensionsConverter x:Key="ReverseOne" />
+        
+        <SolidColorBrush x:Key="HorizontalSliderTrackNormalBackground" Color="BlanchedAlmond"/>
+        <LinearGradientBrush x:Key="HorizontalSliderTrackNormalBorder" EndPoint="0,1" StartPoint="0,0">
+            <GradientStop Color="#FF000000" Offset="0.1"/>
+            <GradientStop Color="White" Offset=".9"/>
+        </LinearGradientBrush>
+        <Style x:Key="SliderRepeatButtonStyle" TargetType="{x:Type RepeatButton}">
+            <Setter Property="OverridesDefaultStyle" Value="true"/>
+            <Setter Property="IsTabStop" Value="false"/>
+            <Setter Property="Focusable" Value="false"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type RepeatButton}">
+                        <Rectangle Fill="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="CustomThumbForSlider" TargetType="{x:Type Thumb}">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Thumb}">
+                        <!--<Rectangle Width="1" Height="20" Fill="Black" />-->
+                        <Ellipse Fill="#DC6E96" Stroke="#C86488" Height="15" Width="15"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="MyCustomStyleForSlider" TargetType="{x:Type Slider}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Slider}">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto" MinHeight="{TemplateBinding MinHeight}"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <!-- tickbar shows always above slider, even if bottomright placement is selected -->
+                                <TickBar x:Name="TopTick" Visibility="Collapsed" Fill="{TemplateBinding Foreground}" Placement="Top" Height="4" Grid.Row="0"/>
+                                <TickBar x:Name="BottomTick" Visibility="Collapsed" Fill="{TemplateBinding Foreground}" Placement="Bottom" Height="4" Grid.Row="0"/>
+                                <Border x:Name="TrackBackground" 
+                                        Background="{StaticResource HorizontalSliderTrackNormalBackground}"
+                                        BorderBrush="{StaticResource HorizontalSliderTrackNormalBorder}"                                        
+                                        BorderThickness="1" CornerRadius="1"
+                                        Margin="5,0" VerticalAlignment="Center" Height="4.0" Grid.Row="1" >
+                                    <Canvas Margin="-6,-1">
+                                        <Rectangle Visibility="Hidden" x:Name="PART_SelectionRange" Height="4.0"
+                                                   Fill="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"
+                                                   Stroke="{DynamicResource {x:Static SystemColors.ControlDarkDarkBrushKey}}"
+                                                   StrokeThickness="1.0"/>
+                                    </Canvas>
+                                </Border>
+                                <Track x:Name="PART_Track" Grid.Row="1">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton  Style="{StaticResource  SliderRepeatButtonStyle}" Command="{x:Static Slider.DecreaseLarge}"/>
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Style="{StaticResource SliderRepeatButtonStyle}" Command="{x:Static Slider.IncreaseLarge}"/>
+                                    </Track.IncreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb x:Name="Thumb" Style="{StaticResource CustomThumbForSlider}" Background="Black"/>
+                                    </Track.Thumb>
+                                </Track>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!--<Style x:Key="MenuTemplate" TargetType="{x:Type ContextMenu}">
+            <Setter Property="OverridesDefaultStyle" Value="True" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <mwt:SystemDropShadowChrome Color="#00FFFFFF" Name="Shdw" SnapsToDevicePixels="True">
+                            <Border BorderThickness="{TemplateBinding Border.BorderThickness}" BorderBrush="{TemplateBinding Border.BorderBrush}" Background="{TemplateBinding Panel.Background}" Name="ContextMenuBorder">
+                                <ScrollViewer Style="{DynamicResource {ComponentResourceKey TypeInTargetAssembly=FrameworkElement, ResourceId=MenuScrollViewer}}" Name="ContextMenuScrollViewer" Margin="1,0,1,0" Grid.ColumnSpan="2">
+                                    <Grid RenderOptions.ClearTypeHint="Enabled">
+                                        <Canvas Width="0" Height="0" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                            <Rectangle Fill="{x:Null}" Name="OpaqueRect" Width="Auto" Height="Auto" />
+                                        </Canvas>
+                                        <Rectangle RadiusX="2" RadiusY="2" Fill="#FFF1F1F1" Width="28" Margin="1,2,1,2" HorizontalAlignment="Left" />
+                                        <Rectangle Fill="#FFE2E3E3" Width="1" Margin="29,2,0,2" HorizontalAlignment="Left" />
+                                        <Rectangle Fill="#FFFFFFFF" Width="1" Margin="30,2,0,2" HorizontalAlignment="Left" />
+                                        <ItemsPresenter Name="ItemsPresenter" Margin="{TemplateBinding Control.Padding}" SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                                    </Grid>
+                                </ScrollViewer>
+                            </Border>
+                        </mwt:SystemDropShadowChrome>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="ContextMenuService.HasDropShadow">
+                                <Setter Property="FrameworkElement.Margin" TargetName="Shdw">
+                                    <Setter.Value>
+                                        <Thickness>0,0,5,5</Thickness>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter Property="mwt:SystemDropShadowChrome.Color" TargetName="Shdw">
+                                    <Setter.Value>
+                                        <Color>#71000000</Color>
+                                    </Setter.Value>
+                                </Setter>
+                                <Trigger.Value>
+                                    <s:Boolean>True</s:Boolean>
+                                </Trigger.Value>
+                            </Trigger>
+                            <Trigger Property="ScrollViewer.CanContentScroll" SourceName="ContextMenuScrollViewer">
+                                <Setter Property="Canvas.Top" TargetName="OpaqueRect">
+                                    <Setter.Value>
+                                        <Binding Path="VerticalOffset" ElementName="ContextMenuScrollViewer" />
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter Property="Canvas.Left" TargetName="OpaqueRect">
+                                    <Setter.Value>
+                                        <Binding Path="HorizontalOffset" ElementName="ContextMenuScrollViewer" />
+                                    </Setter.Value>
+                                </Setter>
+                                <Trigger.Value>
+                                    <s:Boolean>False</s:Boolean>
+                                </Trigger.Value>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>-->
+    </Window.Resources>
+    <Grid x:Name="MainGrid">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <!-- 294 -->
+            <ColumnDefinition Width="auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <ScrollViewer x:Name="ListScroll" ScrollChanged="ListScroll_ScrollChanged">
+            <ListBox x:Name="SkillsList" TabIndex="0" Grid.Column="0" IsSynchronizedWithCurrentItem="True" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" AllowDrop="True" DragOver="SkillsList_DragOver" ContextMenuOpening="SkillsList_ContextMenuOpening" SelectionChanged="SkillsList_SelectionChanged" SizeChanged="SkillsList_SizeChanged" PreviewMouseRightButtonDown="SkillsList_PreviewMouseRightButtonDown" PreviewMouseLeftButtonDown="SkillsList_PreviewMouseLeftButtonDown">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem x:Name="ListNew" Click="ListNew_Click" Header="New folder" />
+                        <MenuItem x:Name="ListRename" Click="ListRename_Click" Header="Rename" />
+                        <MenuItem x:Name="ListDelete" Click="ListDelete_Click" Header="Delete" />
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+                <ListBox.ItemContainerStyle>
+                    <!-- By default, height is usually 20, but sometimes 19. We need to set it explicitly.-->
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Height" Value="20" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
+        </ScrollViewer>
+        <GridSplitter x:Name="Splitter" Focusable="False" Grid.Column="1" Margin="0,0,0,0" Width="3" Background="White" VerticalAlignment="Stretch" HorizontalAlignment="Center" />
+        <Grid x:Name="ToolbarAndThumbs" Grid.Column="2">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="33" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.Background>
+                    <SolidColorBrush Color="#D9D9D9" />
+                </Grid.Background>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock Text="Sort by:" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    <ComboBox x:Name="SortBy" TabIndex="2" Height="22" Margin="10,0,0,0" SelectionChanged="SortBy_SelectionChanged">
+                        <ComboBoxItem>Name</ComboBoxItem>
+                        <ComboBoxItem>Date</ComboBoxItem>
+                    </ComboBox>
+                    <ComboBox x:Name="SortOrder" TabIndex="3" Height="22" Margin="10,0,0,0" SelectionChanged="SortOrder_SelectionChanged">
+                        <ComboBoxItem>Ascending</ComboBoxItem>
+                        <ComboBoxItem>Descending</ComboBoxItem>
+                    </ComboBox>
+                    <TextBlock Text="Thumbnails per row:" Margin="10,0,0,0" VerticalAlignment="Center" />
+                    <Grid>
+                        <Canvas x:Name="ThumbSizeSliderCanvas" Visibility="Visible" Width="185" Margin="10,0,0,0"></Canvas>
+                        <gymnasticsvideogallery:CustomSlider x:Name="ThumbSizeSlider" TabIndex="4" Width="200" TickPlacement="TopLeft" IsDirectionReversed="True" AutoToolTipPrecision="0" TickFrequency="1" IsSnapToTickEnabled="True" AutoToolTipPlacement="BottomRight" Style="{StaticResource MyCustomStyleForSlider}" Margin="10,0,0,0" PreviewKeyDown="ThumbSizeSlider_PreviewKeyDown" VerticalAlignment="Center" IsMoveToPointEnabled="True" Focusable="True" SmallChange="1" LargeChange="4" Minimum="1" />
+                    </Grid>
+                    <TextBlock x:Name="ThumbSizeLabel" Text="0" Margin="10,0,0,0" VerticalAlignment="Center" />
+                    <CheckBox x:Name="ShowAllFilenames" TabIndex="5" Content="Show all filenames" Margin="20,0,20,0" VerticalAlignment="Center" Unchecked="ShowAllFilenames_Checked" Checked="ShowAllFilenames_Checked" />
+                </StackPanel>
+                <TextBlock x:Name="StatusText" Grid.Column="1" Height="20" Padding="3" Margin="0,0,10,0" HorizontalAlignment="Center" Text="" Visibility="Hidden">
+                    <TextBlock.Background>
+                        <SolidColorBrush Color="#D9D9D9" Opacity="0.9" />
+                    </TextBlock.Background>
+                </TextBlock>
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Image x:Name="FileOpen" Grid.Row="0" ToolTip="Open file" Margin="0,2,12,0" Width="15" Height="15" VerticalAlignment="Center" MouseLeftButtonUp="OpenContentSelector" />
+                    <Image x:Name="ActionsOpen" Grid.Row="0" ToolTip="Actions" ContextMenuOpening="ActionsOpen_ContextMenuOpening" Margin="0,4,10,0" Width="21" Height="21" VerticalAlignment="Center" MouseLeftButtonUp="ActionsOpen_Click">
+                        <Image.ContextMenu>
+                            <ContextMenu x:Name="ActionsMenu">
+                                <MenuItem x:Name="SelectAll" Header="Select all" Click="SelectAll_Click" />
+                                <MenuItem x:Name="UnselectAll" Header="Unselect all" Click="UnselectAll_Click" />
+                                <Separator />
+                                <MenuItem x:Name="DeleteSelected" Header="Delete selected" Click="DeleteSelected_Click" />
+                                <Separator />
+                                <MenuItem Header="Generate all thumbnails" Click="GenerateAllThumbs_Click" />
+                                <MenuItem Header="Remove unused thumbnails" Click="DeleteUnusedThumbs_Click" />
+                                <Separator />
+                                <MenuItem x:Name="ShowHideExtractStatus" Header="Show/hide extract status" Click="ShowHideExtractStatus_Click" />
+                                <MenuItem x:Name="ExtractSelected" Header="Extract frames of selected" Click="GenerateSelectedIndexes_Click" />
+                                <MenuItem Header="Extract frames of all" Click="GenerateAllIndexes_Click" />
+                                <MenuItem Header="Remove unused indexes" Click="DeleteUnusedIndexes_Click" />
+                                <Separator />
+                                <MenuItem Header="Remove unused comments" Click="DeleteUnusedComments_Click" />
+                            </ContextMenu>
+                        </Image.ContextMenu>
+                    </Image>
+                    <Image x:Name="SettingsOpen" Grid.Row="0" ToolTip="Settings" Margin="0,0,10,0" Width="21" Height="21" VerticalAlignment="Center" MouseLeftButtonUp="SettingsOpen_Click" />
+                    <Image x:Name="CloseButton" Grid.Row="0" Margin="5,0,0,0" Width="32" Height="24" VerticalAlignment="Top" MouseEnter="CloseButton_MouseEnter" MouseLeave="CloseButton_MouseLeave" MouseLeftButtonDown="CloseButton_MouseLeftButtonDown" MouseLeftButtonUp="CloseButton_MouseLeftButtonUp" Visibility="Collapsed" />
+                </StackPanel>
+            </Grid>
+            <ScrollViewer x:Name="ThumbScroll" IsTabStop="True" TabIndex="1" FocusVisualStyle="{x:Null}" GotFocus="ThumbScroll_GotFocus" LostFocus="ThumbScroll_LostFocus" SizeChanged="ThumbScroll_SizeChanged" Grid.Row="1" VerticalScrollBarVisibility="Auto" ScrollChanged="ThumbScroll_ScrollChanged" PreviewMouseLeftButtonDown="ThumbScroll_PreviewMouseLeftButtonDown" MouseLeftButtonDown="ThumbScroll_MouseLeftButtonDown">
+                <Grid>                    
+                    <WrapPanel x:Name="Thumbs" SizeChanged="Thumbs_SizeChanged" HorizontalAlignment="Left" Orientation="Horizontal" VerticalAlignment="Top" MouseMove="Thumbs_MouseMove" MouseLeave="Thumbs_MouseLeave" ContextMenuOpening="Thumbs_ContextMenuOpening" ContextMenuClosing="Thumbs_ContextMenuClosing">
+                        <WrapPanel.ContextMenu>
+                            <ContextMenu x:Name="MyContext">
+                                <MenuItem Header="Show info" Click="Context_ShowInfo" />
+                                <MenuItem x:Name="MenuItemExtract" Visibility="Collapsed" Header="" Click="ExtractShow_Click" />
+                                <MenuItem Header="Rename" Click="Rename_Click" />
+                                <MenuItem x:Name="MenuItemRestore" Header="Restore original thumbnail" Click="RestoreThumb_Click" />
+                                <MenuItem Header="Delete" Click="Context_DeleteClick" />
+                                <!--<MenuItem Header="Show info2" Click="Context_GetTemplate" />-->
+                            </ContextMenu>
+                        </WrapPanel.ContextMenu>
+                    </WrapPanel>
+                    <WrapPanel x:Name="FileNameGridAllCanvas" IsHitTestVisible="False"></WrapPanel>
+                    <StackPanel x:Name="DefaultPage" Orientation="Horizontal" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#D9D9D9">
+                        <TextBlock Text="No start directory was set." Margin="15,15,5,15" VerticalAlignment="Center" />
+                        <Button x:Name="ChooseStartDir" Content="Choose" Height="25" Width="60" Click="ChooseStartDir_Click" Margin="5,15,15,15" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Grid>                
+            </ScrollViewer>            
+            <Grid x:Name="FileNameGrid" Grid.Row="1" IsHitTestVisible="False" VerticalAlignment="Top" HorizontalAlignment="Left" Width="{Binding thumbW}" Height="30" Visibility="Hidden">
+                <Grid.Background>
+                    <SolidColorBrush Color="White" Opacity="0.9" />
+                </Grid.Background>
+                <TextBlock x:Name="FileNameLabelText" HorizontalAlignment="Center" VerticalAlignment="Center" Text="" />
+                <TextBox x:Name="FileRenameText" KeyDown="FileRenameText_KeyDown" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" VerticalAlignment="Center" Text="" Visibility="Hidden" />
+            </Grid>
+            <Grid Grid.Row="1" ClipToBounds="True" IsHitTestVisible="False">
+                <Rectangle x:Name="BorderRect" Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Top" Stroke="Lime" StrokeThickness="3" Width="{Binding thumbW}" Height="{Binding thumbH}" Visibility="Hidden" />
+            </Grid>            
+            <Grid x:Name="CommentGrid" Grid.Row="1" IsHitTestVisible="False" VerticalAlignment="Top" HorizontalAlignment="Left" Visibility="Hidden">
+                <Grid.Background>
+                    <SolidColorBrush Color="White" Opacity="0.9" />
+                </Grid.Background>
+                <TextBlock x:Name="CommentLabelText" Text="" Margin="5" />
+            </Grid>
+        </Grid>
+        <Border x:Name="ListNewFieldWindow" SnapsToDevicePixels="True" Grid.ColumnSpan="3" Background="#D9D9D9" BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Hidden">
+            <StackPanel>
+                <TextBlock Text="New directory:" Margin="20,20,20,5" />
+                <TextBox x:Name="ListNewField" Margin="20,5,20,20" Grid.ColumnSpan="3" Width="{Binding ElementName=SkillsList, Path=ActualWidth}"  Padding="4,1,0,0" Height="20" VerticalAlignment="Top" HorizontalAlignment="Left" KeyDown="ListNewField_KeyDown" />
+            </StackPanel>
+        </Border>
+        <TextBox x:Name="ListRenameField" Grid.ColumnSpan="3" Width="{Binding ElementName=SkillsList, Path=ActualWidth}"  Padding="4,1,0,0" Height="20" VerticalAlignment="Top" HorizontalAlignment="Left" Visibility="Hidden" KeyDown="ListRenameField_KeyDown" />
+                
+        <Canvas x:Name="DrawingCanvas" Grid.ColumnSpan="3">
+            <MediaElement x:Name="MediaElement1" ScrubbingEnabled="True" ContextMenuOpening="MediaElement1_ContextMenuOpening" ContextMenuClosing="MediaElement1_ContextMenuClosing" MediaOpened="MediaElement1_MediaOpened" MediaEnded="MediaElement1_MediaEnded" UnloadedBehavior="Manual" LoadedBehavior="Manual">
+                <MediaElement.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem x:Name="MarkPosition" Header="Mark position" Click="MarkPosition_Click" />
+                        <MenuItem x:Name="SetThumbnail" Header="Set thumbnail" Click="SetThumbnail_Click" />
+                        <MenuItem x:Name="VideoMenuItemExtract" Header="" Click="ExtractShow_Click" />
+                        <MenuItem Header="Delete" Click="Context_DeleteClick" />
+                    </ContextMenu>
+                </MediaElement.ContextMenu>
+            </MediaElement>
+            <Image x:Name="ImageElement1" MouseLeftButtonDown="ImageElement1_MouseLeftButtonDown" MouseMove="ImageElement1_MouseMove" MouseLeftButtonUp="ImageElement1_MouseLeftButtonUp" Width="{Binding ElementName=MainGrid, Path=ActualWidth}" Height="{Binding ElementName=MainGrid, Path=ActualHeight}" HorizontalAlignment="Left" VerticalAlignment="Top" />
+            <!--<ffme:MediaElement Grid.ColumnSpan="3" Grid.RowSpan="3" x:Name="MediaElement1" ScrubbingEnabled="True" MediaOpened="MediaElement1_MediaOpened" MediaEnded="MediaElement1_MediaEnded" UnloadedBehavior="Manual" LoadedBehavior="Manual" />-->
+        </Canvas>
+
+        <!-- This has to be in the middle of the screen -->
+        <Grid x:Name="FileInfoGrid" Grid.ColumnSpan="3" IsHitTestVisible="False" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Hidden">
+            <Grid.Background>
+                <SolidColorBrush Color="White" Opacity="0.9" />
+            </Grid.Background>
+            <TextBlock x:Name="FileInfoText" Margin="10,10,10,10" Text="" />
+        </Grid>
+
+        <TextBlock x:Name="StatusTextVideo" Grid.Column="2" Height="20" Padding="3" Margin="0,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Top" Text="" Visibility="Hidden">
+            <TextBlock.Background>
+                <SolidColorBrush Color="#D9D9D9" Opacity="0.9" />
+            </TextBlock.Background>
+        </TextBlock>
+        <Grid x:Name="VideoControlGrid" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Visibility="Hidden" ContextMenuOpening="MediaElement1_ContextMenuOpening" ContextMenuClosing="MediaElement1_ContextMenuClosing" >
+            <Grid.ContextMenu>
+                <ContextMenu>
+                    <MenuItem x:Name="MarkPosition2" Header="Mark position" Click="MarkPosition_Click" />
+                    <MenuItem x:Name="SetThumbnail2" Header="Set thumbnail" Click="SetThumbnail_Click" />
+                    <MenuItem x:Name="VideoMenuItemExtract2" Header="" Click="ExtractShow_Click" />
+                    <MenuItem Header="Delete" Click="Context_DeleteClick" />
+                </ContextMenu>
+            </Grid.ContextMenu>
+            <Grid.Background>
+                <SolidColorBrush Color="White" Opacity="0.9" />
+            </Grid.Background>
+            <Grid VerticalAlignment="Center" Visibility="Visible" Margin="5,5,5,5">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Image x:Name="ButtonLock" Width="25" Height="25" Margin="5,0,5,0" MouseLeftButtonDown="ButtonLock_Click" ToolTipOpening="ButtonLock_ToolTipOpening" />
+                    <Image x:Name="ButtonComment" Width="25" Height="25" Margin="8,0,7,0" MouseLeftButtonDown="ButtonComment_Click" ToolTipOpening="ButtonComment_ToolTipOpening" />
+                    <Image x:Name="ButtonPrevious" Width="15" Height="15" ToolTip="Previous" Margin="10,0,10,0" MouseLeftButtonDown="ButtonPrevious_Click" />
+                    <Image x:Name="ButtonPlayPause" Width="16" Height="20" ToolTip="Play" Margin="5,0,5,0" MouseLeftButtonDown="ButtonPlayPause_Click" />
+                    <!--<Button x:Name="ButtonStop" Content="Stop" Width="50" Visibility="Collapsed" Click="ButtonStop_Click" />-->
+                    <Image x:Name="ButtonNext" Width="15" Height="15" ToolTip="Next" Margin="10,0,10,0" MouseLeftButtonDown="ButtonNext_Click" />
+                    <TextBlock x:Name="TimeText" Margin="10,0,0,0" TextWrapping="Wrap" Text="0:00:00.000" VerticalAlignment="Center" />
+                    <TextBlock x:Name="TimeTextTotal" Margin="0,0,5,0" TextWrapping="Wrap" Text=" / 0:00:00.000" VerticalAlignment="Center" />
+                </StackPanel>
+                <Canvas x:Name="CommentCanvas" Grid.Column="1" VerticalAlignment="Center" Height="25" />
+                <Canvas x:Name="StartMarkerTextCanvas" Cursor="Hand" Grid.Column="1" SnapsToDevicePixels="True" Width="{Binding ElementName=StartMarkerText, Path=ActualWidth}" Height="{Binding ElementName=StartMarkerText, Path=ActualHeight}" HorizontalAlignment="Right" VerticalAlignment="Top" Background="White" Opacity="0.9" Margin="0,-31,0,0" Visibility="Hidden" MouseLeftButtonDown="StartMarkerTextCanvas_MouseLeftButtonDown" MouseLeftButtonUp="StartMarkerTextCanvas_MouseLeftButtonUp">
+                    <TextBlock x:Name="StartMarkerText" Padding="3" Text="" />
+                </Canvas>
+                <Canvas x:Name="EndMarkerTextCanvas" Cursor="Hand" Grid.Column="1" SnapsToDevicePixels="True" Width="{Binding ElementName=EndMarkerText, Path=ActualWidth}" Height="{Binding ElementName=EndMarkerText, Path=ActualHeight}" HorizontalAlignment="Left" VerticalAlignment="Top" Background="White" Opacity="0.9" Margin="0,-31,0,0" Visibility="Hidden" MouseLeftButtonDown="EndMarkerTextCanvas_MouseLeftButtonDown" MouseLeftButtonUp="EndMarkerTextCanvas_MouseLeftButtonUp">
+                    <TextBlock x:Name="EndMarkerText" Padding="3" Text="" />    
+                </Canvas>                
+                <Rectangle x:Name="StartMarker" Grid.Column="1" SnapsToDevicePixels="True" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-31,0,0" Height="35" Width="1" Fill="Black" Visibility="Hidden" />
+                <Rectangle x:Name="EndMarker" Grid.Column="1"  SnapsToDevicePixels="True" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,-31,0,0" Height="35" Width="1" Fill="Black" Visibility="Hidden" />
+                <Rectangle x:Name="CutRectActual" Grid.Column="1" SnapsToDevicePixels="True" Fill="#FF74E8C0" Height="20" Width="0" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                <Rectangle x:Name="CutRectOffset" Grid.Column="1" SnapsToDevicePixels="True" Fill="MediumAquamarine" Height="20" Width="0" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                <Rectangle x:Name="CutRect" Grid.Column="1" SnapsToDevicePixels="True"  Fill="#FF4F9B81" Height="20" Width="0" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                <Canvas x:Name="KeyFrameCanvas" Visibility="Hidden" Grid.Column="1" VerticalAlignment="Center" Height="20" ></Canvas>                
+                <gymnasticsvideogallery:CustomSlider VerticalAlignment="Center" Grid.Column="1" Maximum="1" Value="0" x:Name="TimelineSlider" Style="{StaticResource MyCustomStyleForSlider}" Focusable="False" Thumb.DragStarted="TimelineSlider_DragStarted" Thumb.DragCompleted="TimelineSlider_DragCompleted" ValueChanged="TimelineSlider_ValueChanged" BorderBrush="White" IsMoveToPointEnabled="True" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" >
+                    <TextBlock x:Name="PlaySpeedText" Margin="5,0,0,0" TextWrapping="Wrap" Text="Speed: " />
+                    <TextBlock x:Name="PlaySpeedValue" Margin="0,0,5,0" TextWrapping="Wrap" Text="{Binding Value, ElementName=SpeedRatioSlider, StringFormat=f1}" />
+                    <gymnasticsvideogallery:SliderIgnoreDelta x:Name="SpeedRatioSlider" Focusable="False" Margin="0,0,0,0" Style="{StaticResource MyCustomStyleForSlider}" ValueChanged="SpeedRatioSlider_ValueChanged" Value="1" Width="100" Maximum="1" IsMoveToPointEnabled="True" />
+                    <TextBlock x:Name="VolText" Margin="5,0,0,0" TextWrapping="Wrap" Text="Volume: " />
+                    <TextBlock x:Name="VolValue" Margin="0,0,5,0" Width="30" TextWrapping="Wrap" Text="{Binding ElementName=MediaElement1, Path=Volume, StringFormat=p0}" />
+                    <Slider x:Name="VideoVolume" Width="70" Style="{StaticResource MyCustomStyleForSlider}" Focusable="False" Maximum="1" Value="{Binding ElementName=MediaElement1, Path=Volume}" ValueChanged="VideoVolume_ValueChanged" IsMoveToPointEnabled="True" />
+                    <TextBlock x:Name="FilenameText" HorizontalAlignment="Right" Margin="5,0,5,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+        <Grid x:Name="PictureControlGrid" Grid.ColumnSpan="3" Height="35" VerticalAlignment="Bottom" HorizontalAlignment="Left" Visibility="Hidden">
+            <Grid.Background>
+                <SolidColorBrush Color="White" Opacity="0.9" />
+            </Grid.Background>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Image x:Name="PictureButtonLock" Width="25" Height="25" Margin="10,0,18,0" MouseLeftButtonDown="ButtonLock_Click" ToolTipOpening="ButtonLock_ToolTipOpening" />
+                <Image x:Name="ActualSize" Width="19" Height="19" Margin="0" MouseLeftButtonDown="SetImageActualSize" ToolTipOpening="ActualSize_ToolTipOpening" ToolTip="Actual size" />
+                <Image x:Name="PictureButtonPrevious" Width="15" Height="15" ToolTip="Previous" Margin="18,0,23,0" MouseLeftButtonDown="ButtonPrevious_Click" />
+                <Image x:Name="PictureButtonNext" Width="15" Height="15" ToolTip="Next" Margin="23,0,10,0" MouseLeftButtonDown="ButtonNext_Click" />
+                <TextBlock x:Name="PictureFilenameText" HorizontalAlignment="Right" Margin="5,0,10,0" TextWrapping="Wrap" Text="" VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <Rectangle x:Name="SettingsBackground" Grid.ColumnSpan="3" Visibility="Hidden" Fill="White" Opacity="0.5" />
+        <Grid x:Name="SettingsPage" Grid.ColumnSpan="3" Visibility="Hidden" VerticalAlignment="Center" Background="#e0e0e0" HorizontalAlignment="Center">
+            <Border BorderThickness="1" SnapsToDevicePixels="True" BorderBrush="Black">
+                <ScrollViewer Padding="20,15,20,20" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <GroupBox HorizontalAlignment="Left" Padding="15,7,15,15">
+                            <GroupBox.Header>
+                                <Label FontWeight="Bold" FontSize="14">Window</Label>
+                            </GroupBox.Header>
+                            <StackPanel>
+                                <CheckBox x:Name="SettingStartFullScreen" Content="Full screen" TabIndex="11" Checked="SettingWindow_Checked" Unchecked="SettingWindow_Checked" />
+                                <CheckBox x:Name="SettingStartMaximized" Content="Maximized window" TabIndex="12" Checked="SettingWindow_Checked" Unchecked="SettingWindow_Checked" Margin="20,10,0,0" />
+                                <StackPanel Orientation="Horizontal" Margin="40,10,0,0">
+                                    <TextBlock Text="Width:" />
+                                    <gymnasticsvideogallery:NumericField x:Name="SettingNormalScreenWidth" TabIndex="13" ValueMin="100" ValueMax="{Binding windowWidth}" TextChanged="SettingNumericField_TextChanged" LostFocus="SettingNumericField_LostFocus" Width="40" Margin="10,0,0,0" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="40,10,0,0">
+                                    <TextBlock Text="Height:" />
+                                    <gymnasticsvideogallery:NumericField x:Name="SettingNormalScreenHeight" TabIndex="14" ValueMin="100" ValueMax="{Binding windowHeight}" TextChanged="SettingNumericField_TextChanged" LostFocus="SettingNumericField_LostFocus" Width="40" Margin="10,0,0,0" />
+                                </StackPanel>
+                                <CheckBox x:Name="SettingWindowStartupLocationCenterScreen" Content="Set window to center" TabIndex="15" Checked="SettingWindow_Checked" Unchecked="SettingWindow_Checked" Margin="40,10,0,0" />
+                                <StackPanel Orientation="Horizontal" Margin="60,10,0,0">
+                                    <TextBlock Text="Left:" />
+                                    <gymnasticsvideogallery:NumericField x:Name="SettingNormalScreenLeft" TabIndex="16" ValueMin="{Binding windowWidth, Converter={StaticResource ReverseOne}}" ValueMax="{Binding windowWidth}" TextChanged="SettingNumericField_TextChanged" LostFocus="SettingNumericField_LostFocus" Width="40" Margin="10,0,0,0" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="60,10,0,0">
+                                    <TextBlock Text="Top:" />
+                                    <gymnasticsvideogallery:NumericField x:Name="SettingNormalScreenTop" TabIndex="17" ValueMin="{Binding windowHeight, Converter={StaticResource ReverseOne}}" ValueMax="{Binding windowHeight}" TextChanged="SettingNumericField_TextChanged" LostFocus="SettingNumericField_LostFocus" Width="40" Margin="10,0,0,0" />
+                                </StackPanel>
+                            </StackPanel>                        
+                        </GroupBox>
+                        
+                        <GroupBox HorizontalAlignment="Left" Padding="15,7,15,15">
+                            <GroupBox.Header>
+                                <Label FontWeight="Bold" FontSize="14">Main page</Label>
+                            </GroupBox.Header>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                                    <TextBlock Text="Start directory: " />
+                                    <TextBox x:Name="SettingSkillsPath" TabIndex="18" TextChanged="RegisterSettingChange" LostFocus="SettingSkillsPath_LostFocus" Width="200" Margin="10,0,0,0" />
+                                    <Button x:Name="SettingSelectSkillsPath" TabIndex="19" Content="Select" Width="53" Height="22" Click="SettingSelectSkillsPath_Click" Margin="10,0,0,0" />                                
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <TextBlock Text="List width:" />
+                                    <gymnasticsvideogallery:NumericField x:Name="SettingSkillsListWidth" TabIndex="20" ValueMin="50" ValueMax="{Binding windowWidth}" TextChanged="SettingNumericField_TextChanged" LostFocus="SettingNumericField_LostFocus" Width="30" Margin="10,0,0,0" />
+                                    <TextBlock Text="Can be resized manually too." Margin="10,0,0,0" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <TextBlock Text="Thumbnail size:" />
+                                    <gymnasticsvideogallery:NumericField  x:Name="SettingThumbW" TabIndex="21" ValueMin="89" ValueMax="{Binding windowWidth}" TextChanged="SettingThumbW_TextChanged" LostFocus="SettingNumericField_LostFocus" Width="30" Margin="10,0,0,0" />
+                                    <TextBlock Text=" x " Margin="6,0,0,0" />
+                                    <gymnasticsvideogallery:NumericField x:Name="SettingThumbH" TabIndex="22" ValueMin="50" ValueMax="{Binding windowHeight}" TextChanged="SettingThumbH_TextChanged" LostFocus="SettingNumericField_LostFocus" Width="30" Margin="6,0,0,0" />
+                                </StackPanel>
+                                <CheckBox x:Name="SettingShowThumbComments" TabIndex="23" Checked="RegisterSettingChange" Unchecked="RegisterSettingChange" Content="Show comments on thumnail mouse over" Margin="0,10,0,0"/>
+                                <CheckBox x:Name="SettingDeletionConfirmation" TabIndex="24" Checked="RegisterSettingChange" Unchecked="RegisterSettingChange" Content="Confirm deletion" Margin="0,10,0,0"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <TextBlock Text="Separator character/string in filenames:" />
+                                    <TextBox x:Name="SettingFileNameSeparator" TabIndex="25" TextChanged="SettingFilteredField_TextChanged" LostFocus="SettingFilteredField_LostFocus" Width="30" Margin="10,0,0,0" VerticalAlignment="Top" />                                
+                                </StackPanel>
+                                <TextBlock Text="Cannot be / \ ? % * : | &quot; &lt; &gt;&#x0a;Used when creating thumbnails and frame indexes.&#x0a;Subdirectories must not contain it." Margin="20,6,0,0"  />
+                            </StackPanel>
+                        </GroupBox>
+                        
+                        <GroupBox HorizontalAlignment="Left" Padding="15,7,15,15">
+                            <GroupBox.Header>
+                                <Label FontWeight="Bold" FontSize="14">Playback and cutting</Label>
+                            </GroupBox.Header>
+                            <StackPanel>                                
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+                                    <TextBlock Text="Image/video background:" />
+                                    <ItemsControl IsTabStop="False" TabIndex="26" KeyboardNavigation.TabNavigation="Once">
+                                        <!-- Using StackPanel gives this problem: pressing right when the focus is on White, the focus gets in the Cut End textbox -->
+                                        <!--<ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>-->
+                                        <RadioButton x:Name="SettingBackgroundIsBlack" GroupName="SettingBackgroundIsBlack" Checked="RegisterSettingChange" Unchecked="RegisterSettingChange" Content="Black" Margin="10,0,0,0" />
+                                        <RadioButton x:Name="SettingBackgroundIsBlack_No" GroupName="SettingBackgroundIsBlack" Content="White"  Margin="10,0,0,0" />
+                                    </ItemsControl>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <TextBlock Text="Next/previous jump length" />
+                                    <gymnasticsvideogallery:NumericField x:Name="SettingJumpValue" TabIndex="27" ValueMin="0" ValueMax="1000000" TextChanged="SettingNumericField_TextChanged" LostFocus="SettingNumericField_LostFocus" Width="40" Margin="10,0,0,0" />
+                                    <TextBlock Text="ms" Margin="6,0,0,0" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <TextBlock Text="Added length (ms)" />
+                                    <TextBlock Text="Cut start:" Margin="20,0,0,0" />
+                                    <gymnasticsvideogallery:NumericField x:Name="SettingCutMarginStart" TabIndex="28" ValueMin="0" ValueMax="1000000" TextChanged="SettingNumericField_TextChanged" LostFocus="SettingNumericField_LostFocus" Width="40" Margin="6,0,0,0" />                                
+                                    <TextBlock Text="Cut end:" Margin="20,0,0,0" />
+                                    <gymnasticsvideogallery:NumericField x:Name="SettingCutMarginEnd" TabIndex="29" ValueMin="0" ValueMax="1000000" TextChanged="SettingNumericField_TextChanged" LostFocus="SettingNumericField_LostFocus" Width="40" Margin="6,0,0,0" />                                
+                                </StackPanel>
+                                <CheckBox x:Name="SettingSaveDialog" TabIndex="30" Checked="RegisterSettingChange" Unchecked="RegisterSettingChange" Content="File save dialog" Margin="0,10,0,0"/>
+                                <StackPanel Orientation="Horizontal" Margin="20,10,0,0">
+                                    <TextBlock Text="Default directory:" />                                    
+                                    <ItemsControl IsTabStop="False" TabIndex="31" KeyboardNavigation.TabNavigation="Once">
+                                        <!-- Using StackPanel gives this problem: when the tab is here, pressing the right arrow will put the focus on the next control. It works, if I write "Last use" instead of "Last used" -->
+                                        <!--<ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>-->
+                                        <RadioButton x:Name="SettingRememberDir" GroupName="SettingRememberDir" Content="Last used" Checked="RegisterSettingChange" Unchecked="RegisterSettingChange" Margin="10,0,0,0" />
+                                        <RadioButton x:Name="SettingRememberDir_No" GroupName="SettingRememberDir" Content="Location of video"  Margin="10,0,0,0" />
+                                    </ItemsControl>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <TextBlock Text="New filename pattern to be added:" />
+                                    <TextBox x:Name="SettingRenameRule" TabIndex="32" TextChanged="SettingFilteredField_TextChanged" LostFocus="SettingFilteredField_LostFocus" Width="100" Margin="10,0,0,0" />                                
+                                </StackPanel>
+                                <TextBlock Margin="20,6,0,0">
+                                    You can use [N] to define an increasing number.<LineBreak />
+                                    Cutting "myvideo.mp4" with pattern "_cut[N]" will result in "myvideo_cut1.mp4".<LineBreak />
+                                    The next cut will be named "myvideo_cut2.mp4".
+                                </TextBlock>
+                                <CheckBox x:Name="SettingIncludeMarkers" TabIndex="33" Checked="RegisterSettingChange" Unchecked="RegisterSettingChange" Content="Add markers to cut video" Margin="0,10,0,0"/>
+                                <CheckBox x:Name="SettingSuccessDialog" TabIndex="34" Checked="RegisterSettingChange" Unchecked="RegisterSettingChange" Content="Success message" Margin="0,10,0,0"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <TextBlock Text="New filename pattern for frame reindexing:" />
+                                    <TextBox x:Name="SettingReindexRenameRule" TabIndex="35" TextChanged="SettingFilteredField_TextChanged" LostFocus="SettingFilteredField_LostFocus" Width="100" Margin="10,0,0,0" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <TextBlock Text="Move enlarged image by pixels:" />
+                                    <gymnasticsvideogallery:NumericField x:Name="SettingImageMoveStep" TabIndex="36" ValueMin="1" ValueMax="{Binding windowWidth}" TextChanged="SettingNumericField_TextChanged" LostFocus="SettingNumericField_LostFocus" Width="40" Margin="6,0,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                        </GroupBox>                        
+                        
+                        <!--<GroupBox HorizontalAlignment="Left" Padding="15,7,15,15">
+                            <GroupBox.Header>
+                                <Label FontWeight="Bold">Shortcut keys</Label>                            
+                            </GroupBox.Header>
+                            <DataGrid x:Name="ShortCutTable">
+                                <DataGridTextColumn Header="First Name"  Binding="{Binding FirstName}"/>
+                                <DataGridTextColumn Header="Last Name" Binding="{Binding LastName}" />
+                            </DataGrid>
+                        </GroupBox>-->                    
+                    </StackPanel>                
+                </ScrollViewer>
+            </Border>
+            <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Background="#e0e0e0" Margin="0,25,42,0">
+                <Button Content="Cancel" x:Name="SettingsCancelButton" TabIndex="6" Click="SettingsCancelButton_Click" Margin="25,0,0,0" Width="60" Height="25" />
+                <Button Content="Save" x:Name="SettingsSaveButton" TabIndex="7" Click="SettingsSaveButton_Click" Margin="25,10,0,0" Width="60" Height="25" />
+                <Button Content="Apply" x:Name="SettingsApplyButton" TabIndex="8" Click="SettingsApplyButton_Click" Margin="25,10,0,0" Width="60" Height="25" />
+                <Button Content="Reset" x:Name="SettingsResetButton" TabIndex="9" Click="SettingsResetButton_Click" Margin="25,10,0,0" Width="60" Height="25" />
+                <Button Content="Default" x:Name="SettingsDefaultButton" TabIndex="10" Click="SettingsDefaultButton_Click" Margin="25,10,0,25" Width="60" Height="25" />
+            </StackPanel>
+                        
+        </Grid>
+        <!--<WebBrowser Grid.ColumnSpan="3" Source="https://www.youtube.com/watch?v=S5UQHWnQaSo" />-->
+    </Grid>
+</Window>

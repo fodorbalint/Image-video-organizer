@@ -1,0 +1,26 @@
+﻿<Window x:Class="GymnasticsVideoGallery.Window2"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:GymnasticsVideoGallery"
+        mc:Ignorable="d"
+        Title="Confirm overwrite" Height="153" Width="407" ResizeMode="NoResize" PreviewKeyDown="Window_PreviewKeyDown" Loaded="Window_Loaded" WindowStartupLocation="CenterScreen"><!-- width is 391, but it would appear 375. Height 144. -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="42" />
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="0" VerticalAlignment="Center">
+            <TextBlock Margin="11,0,11,0" TextWrapping="Wrap" x:Name="Message" />
+        </Grid>
+        <Grid Grid.Row="1" Background="#F0F0F0">
+            <StackPanel Orientation="Horizontal" Margin="15,0,15,0">
+                <Button x:Name="OverwriteButton" IsDefault="True" TabIndex="0" Click="OverwriteButton_Click" Width="85" Height="23" Content="Overwrite" Margin="0,0,7,0" />
+                <Button x:Name="OverwriteAllButton" TabIndex="1" Click="OverwriteAllButton_Click" Width="85" Height="23" Content="Overwrite all" Margin="0,0,7,0" />
+                <Button x:Name="NoButton" TabIndex="2" Click="NoButton_Click" Width="85" Height="23" Content="No" Margin="0,0,7,0" />
+                <Button  x:Name="AbortButton" TabIndex="3" Click="AbortButton_Click" Width="85" Height="23" Content="Abort" />
+            </StackPanel>            
+        </Grid>
+    </Grid>
+</Window>
