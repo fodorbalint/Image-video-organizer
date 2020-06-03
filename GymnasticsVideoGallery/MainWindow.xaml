@@ -448,8 +448,9 @@
                                                 <StackPanel Orientation="Horizontal" />
                                             </ItemsPanelTemplate>
                                         </ItemsControl.ItemsPanel>-->
-                                        <RadioButton x:Name="SettingBackgroundIsBlack" GroupName="SettingBackgroundIsBlack" Checked="RegisterSettingChange" Unchecked="RegisterSettingChange" Content="Black" Margin="10,0,0,0" />
-                                        <RadioButton x:Name="SettingBackgroundIsBlack_No" GroupName="SettingBackgroundIsBlack" Content="White"  Margin="10,0,0,0" />
+                                        <RadioButton x:Name="SettingBackgroundBlack" GroupName="SettingBackground" Checked="RegisterSettingChange" Content="Black" Margin="10,0,0,0" />
+                                        <RadioButton x:Name="SettingBackgroundGray" GroupName="SettingBackground" Checked="RegisterSettingChange" Content="Gray"  Margin="10,0,0,0" />
+                                        <RadioButton x:Name="SettingBackgroundWhite" GroupName="SettingBackground" Checked="RegisterSettingChange" Content="White"  Margin="10,0,0,0" />
                                     </ItemsControl>
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">

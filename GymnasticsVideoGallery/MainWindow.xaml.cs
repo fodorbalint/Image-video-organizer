@@ -5034,7 +5034,18 @@ namespace GymnasticsVideoGallery
                 Splitter.Visibility = Visibility.Hidden;
                 ToolbarAndThumbs.Visibility = Visibility.Hidden;
 
-                this.Background = (settings["BackgroundIsBlack"]) ? Brushes.Black : Brushes.White;
+                if (settings["BackgroundBlack"])
+                {
+                    this.Background = Brushes.Black;
+                }
+                if (settings["BackgroundGray"])
+                {
+                    this.Background = Brushes.Gray;
+                }
+                if (settings["BackgroundWhite"])
+                {
+                    this.Background = Brushes.White;
+                }
 
                 videoSource = fileName; //used in extracting frames
 
@@ -5127,7 +5138,18 @@ namespace GymnasticsVideoGallery
             Splitter.Visibility = Visibility.Hidden;
             ToolbarAndThumbs.Visibility = Visibility.Hidden;
 
-            this.Background = (settings["BackgroundIsBlack"]) ? Brushes.Black : Brushes.White;
+            if (settings["BackgroundBlack"])
+            {
+                this.Background = Brushes.Black;
+            }
+            if (settings["BackgroundGray"])
+            {
+                this.Background = Brushes.Gray;
+            }
+            if (settings["BackgroundWhite"])
+            {
+                this.Background = Brushes.White;
+            }
 
             if (this.WindowStyle != WindowStyle.None)
             {
@@ -6184,6 +6206,11 @@ namespace GymnasticsVideoGallery
             System.Windows.MessageBox.Show(Convert.ToString(s, CultureInfo.InvariantCulture));
         }
 
+        private void CW(string s)
+        {
+            Console.WriteLine("---------- " + s + " ----------");
+        }
+
         #endregion
 
         #region Debug
@@ -6526,17 +6553,15 @@ namespace GymnasticsVideoGallery
                     }
                     else //bool
                     {
-                        try
+                        if (this.FindName("Setting" + kvp.Key) is System.Windows.Controls.CheckBox)
                         {
                             System.Windows.Controls.CheckBox control = (System.Windows.Controls.CheckBox)this.FindName("Setting" + kvp.Key);
                             control.IsChecked = kvp.Value;
                         }
-                        catch
+                        else
                         {
                             System.Windows.Controls.RadioButton control = (System.Windows.Controls.RadioButton)this.FindName("Setting" + kvp.Key);
-                            System.Windows.Controls.RadioButton control2 = (System.Windows.Controls.RadioButton)this.FindName("Setting" + kvp.Key + "_No");
                             control.IsChecked = kvp.Value;
-                            control2.IsChecked = !kvp.Value;
                         }
                     }
                 }
@@ -6544,9 +6569,10 @@ namespace GymnasticsVideoGallery
 
             StartFullScreen_Set();
             changedByProgramSettings = false;
+
             //Shortcut keys
             //ShortCutTable.ItemsSource = shortCuts;
-        }
+            }
 
         private void RegisterSettingChange(object sender, EventArgs e) //some fields containing numbers handle the change themselves
         {
@@ -6556,10 +6582,45 @@ namespace GymnasticsVideoGallery
             if (sender is System.Windows.Controls.CheckBox)
             {
                 changedSettings[settingName] = ((System.Windows.Controls.CheckBox)sender).IsChecked;
+
+                if (changedSettings[settingName] == settings[settingName])
+                {
+                    changedSettings.Remove(settingName);
+                }
             }
             else if (sender is System.Windows.Controls.RadioButton)
             {
-                changedSettings[settingName] = ((System.Windows.Controls.RadioButton)sender).IsChecked;
+                if (settingName == "BackgroundBlack")
+                {
+                    changedSettings["BackgroundBlack"] = true;
+                    changedSettings["BackgroundGray"] = false;
+                    changedSettings["BackgroundWhite"] = false;
+                }
+                else if (settingName == "BackgroundGray")
+                {
+                    changedSettings["BackgroundBlack"] = false;
+                    changedSettings["BackgroundGray"] = true;
+                    changedSettings["BackgroundWhite"] = false;
+                }
+                else
+                {
+                    changedSettings["BackgroundBlack"] = false;
+                    changedSettings["BackgroundGray"] = false;
+                    changedSettings["BackgroundWhite"] = true;
+                }
+
+                if (changedSettings["BackgroundBlack"] == settings["BackgroundBlack"])
+                {
+                    changedSettings.Remove("BackgroundBlack");
+                }
+                if (changedSettings["BackgroundGray"] == settings["BackgroundGray"])
+                {
+                    changedSettings.Remove("BackgroundGray");
+                }
+                if (changedSettings["BackgroundWhite"] == settings["BackgroundWhite"])
+                {
+                    changedSettings.Remove("BackgroundWhite");
+                }
             }
             else if (sender is System.Windows.Controls.TextBox)
             {
@@ -6571,12 +6632,13 @@ namespace GymnasticsVideoGallery
                 {
                     changedSettings[settingName] = ((System.Windows.Controls.TextBox)sender).Text;
                 }
-            }
 
-            if (changedSettings[settingName] == settings[settingName])
-            {
-                changedSettings.Remove(settingName);
+                if (changedSettings[settingName] == settings[settingName])
+                {
+                    changedSettings.Remove(settingName);
+                }
             }
+            
             SettingsIsModified();
             //Debug.Print("RegisterSettingChange, changedsettings count: " + changedSettings.Count);
         }
@@ -7989,7 +8051,6 @@ namespace GymnasticsVideoGallery
                 Msgbox(ex.Message);
             }
         }
-
 
         #endregion
     }
