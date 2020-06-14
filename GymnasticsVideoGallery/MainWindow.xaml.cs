@@ -29,6 +29,7 @@ using System.Windows.Markup;
 using System.Threading;
 using System.Collections.ObjectModel;
 using System.Drawing.Drawing2D;
+using MetadataExtractor;
 
 namespace GymnasticsVideoGallery
 {
@@ -509,7 +510,7 @@ namespace GymnasticsVideoGallery
 
                 //Stopwatch s = Stopwatch.StartNew();
 
-                if (!Directory.Exists(settings["SkillsPath"]))
+                if (!System.IO.Directory.Exists(settings["SkillsPath"]))
                 {
                     DefaultPage.Visibility = Visibility.Visible;
                     SkillsListSource = new List<string>(); //so generate all thumbnails doesn't return an error.
@@ -668,7 +669,7 @@ namespace GymnasticsVideoGallery
             currentPicIndex = -1;
             selectedPicIndexes.Clear();
             DrawMultiSelection();
-            string[] arr = Directory.GetFiles(System.IO.Path.GetDirectoryName(fileName));
+            string[] arr = System.IO.Directory.GetFiles(System.IO.Path.GetDirectoryName(fileName));
             filesExt = new List<string>();
             int index = 0;
             for (int i = 0; i < arr.Length; i++)
@@ -690,7 +691,7 @@ namespace GymnasticsVideoGallery
         {
             try
             {
-                string[] contents = Directory.GetDirectories(settings["SkillsPath"]);
+                string[] contents = System.IO.Directory.GetDirectories(settings["SkillsPath"]);
                 //System.Windows.MessageBox.Show(Convert.ToString(contents.Length));
                 //SkillsListSource = new ObservableCollection<string>(); //for an updateable list
                 SkillsListSource = new List<string>();
@@ -957,8 +958,8 @@ namespace GymnasticsVideoGallery
             try
             {
                 //Debug.Print("UpdateThumbs dir path: " + (string)settings["SkillsPath"] + (string)settings["SelectedSkill"]);
-                //Debug.Print(((bool)Directory.Exists(settings["SkillsPath"] + settings["SelectedSkill"])).ToString());
-                if (!Directory.Exists(settings["SkillsPath"] + settings["SelectedSkill"]))
+                //Debug.Print(((bool)System.IO.Directory.Exists(settings["SkillsPath"] + settings["SelectedSkill"])).ToString());
+                if (!System.IO.Directory.Exists(settings["SkillsPath"] + settings["SelectedSkill"]))
                 {
                     return;
                 }
@@ -975,7 +976,7 @@ namespace GymnasticsVideoGallery
                 updateThumbsDir = settings["SelectedSkill"];
 
                 Debug.Print("UpdateThumbs dir path: " + (string)settings["SkillsPath"] + (string)settings["SelectedSkill"]);
-                Debug.Print("Exists: " + (bool)Directory.Exists(settings["SkillsPath"] + settings["SelectedSkill"]));
+                Debug.Print("Exists: " + (bool)System.IO.Directory.Exists(settings["SkillsPath"] + settings["SelectedSkill"]));
                 FileInfo[] files;
                 DirectoryInfo info = new DirectoryInfo(settings["SkillsPath"] + settings["SelectedSkill"]);
                 if (settings["SortBy"] == "Name")
@@ -1048,7 +1049,7 @@ namespace GymnasticsVideoGallery
 
                         Debug.Print("Removing elements currentPicIndex " + currentPicIndex + " i " + i);
 
-                        if (currentPicIndex != -1) //it is to position borderRect right, when files are removed from the current directory. Color does not change.
+                        if (currentPicIndex != -1) //it is to position borderRect right, when files are removed from the current System.IO.Directory. Color does not change.
                         {
                             if (i < currentPicIndex)
                             {
@@ -1125,7 +1126,7 @@ namespace GymnasticsVideoGallery
                             CreateThumb(targetFile, i);
                         }
                         //Debug.Print("Updatethumbs, adding thumbs, i " + i + " currentPicIndex " + currentPicIndex);
-                        if (currentPicIndex != -1 && i <= currentPicIndex) //it is to position borderRect right, when files are added to the current directory. 
+                        if (currentPicIndex != -1 && i <= currentPicIndex) //it is to position borderRect right, when files are added to the current System.IO.Directory. 
                         {
                             currentPicIndex++; // 0 1 (2) 3 4, add 2 3, currentPicIndex => 4 
                             this.Dispatcher.Invoke(() =>
@@ -1771,6 +1772,11 @@ namespace GymnasticsVideoGallery
                 }
                 else //picture
                 {
+                    stw = new Stopwatch();
+                    stw.Start();
+
+                    
+
                     if (baseDir == rootDir + "Thumbnails")
                     {
                         fileName = ThumbToOrig(fileName);
@@ -1778,33 +1784,106 @@ namespace GymnasticsVideoGallery
                     Console.WriteLine("Showinfo: " + fileName);
 
                     t += "Picture\n";
-                    t += fileName + "\n\n";
-                    string[] arr = GetMediaInfo(fileName, "Image;%Width%,%Height%");
-                    t += "Resolution: " + arr[0] + " x " + arr[1] + "\n\n";
+                    t += fileName + "\n";
+                    /*string[] arr = GetMediaInfo(fileName, "Image;%Width%,%Height%");
+                    t += "Resolution: " + arr[0] + " x " + arr[1] + "\n\n";*/
 
                     FileInfo fileInfo = new FileInfo(fileName);
                     double length = fileInfo.Length;
                     double lengthMB = length / 1024 / 1024;
                     t += "File size: " + lengthMB.ToString("0.#", CultureInfo.InvariantCulture) + " MB\n";
-                    t += "Date modified: " + fileInfo.LastWriteTime;
+
+                    CW("Showinfo 1: " + stw.ElapsedMilliseconds);
+
+
+                    // Instantiate the reader
+                    /*using (ExifReader reader = new ExifReader(fileName))
+                    {
+                        // Extract the tag data using the ExifTags enumeration
+                        DateTime datePictureTaken;
+                        if (reader.GetTagValue<DateTime>(ExifTags.DateTimeDigitized,
+                                                        out datePictureTaken))
+                        {
+                            // Do whatever is required with the extracted information
+                            t += string.Format("The picture was taken on {0}", datePictureTaken);
+                        }
+                    }*/
+
+                    //------------- slow at first run, otherwise fast
+
+                    string t2 = "";
+                    int resX = 0;
+                    int resY = 0;
+
+                    var directories = ImageMetadataReader.ReadMetadata(fileName);
+                    foreach (var directory in directories)
+                    {
+                        foreach (var tag in directory.Tags)
+                        {
+                            switch (tag.Name)
+                            {
+                                //case "Make":
+                                //case "Model":
+                                case "Exif Image Width":
+                                    resX = int.Parse(tag.Description.Split(' ')[0]);
+                                    break;
+                                case "Exif Image Height":
+                                    resY = int.Parse(tag.Description.Split(' ')[0]);
+                                    break;
+                                case "Date/Time":
+                                    t += "Date taken: " + tag.Description.Split(' ')[0].Replace(':', '.') + " " + tag.Description.Split(' ')[1] + "\n";
+                                    break;
+                                case "Exposure Time":
+                                case "F-Number":
+                                case "ISO Speed Ratings":
+                                case "Exposure Bias Value":
+                                //case "White Balance":
+                                //case "White Balance Mode":
+                                case "Color Temp Kelvin":
+                                case "Focal Length 35":
+                                    t2 += $"{tag.Name}: {tag.Description}\n";
+                                    break;
+                            }
+                            //Console.WriteLine($"{directory.Name} - {tag.Name} = {tag.Description}");
+                        }
+                    }
+                    t += "Resolution: " + resX + " x " + resY + "\n\n" + t2;
+
+                    //----------------------
+
+                    /*System.Drawing.Image image = new System.Drawing.Bitmap(fileName);
+                    System.Drawing.Imaging.PropertyItem[] props = image.PropertyItems;
+
+                    foreach (System.Drawing.Imaging.PropertyItem item in props)
+                    {
+                        System.Text.ASCIIEncoding encoding = new System.Text.ASCIIEncoding();
+                        string valueStr = encoding.GetString(item.Value);
+                        t += item.Id.ToString("x") + ": " + valueStr + "\n";
+                    }*/
+
+                    CW("Showinfo 2: " + stw.ElapsedMilliseconds);
+                    stw.Stop();
                 }
                 FileInfoText.Text = t;
                 FileInfoGrid.Visibility = Visibility.Visible;
                 PositionBorderRect(index, true);
                 BorderRect.Visibility = Visibility.Visible;
                 infoContextItemIndex = index; //used for scrolling, contextItemIndex is reset as the right-click menu closes.
+                Console.WriteLine("ShowInfo infoContextItemIndex: " + infoContextItemIndex);
             }
             catch (Exception ex)
             {
                 FileInfoText.Text = ex.Message + " " + ex.StackTrace;
                 FileInfoGrid.Visibility = Visibility.Visible;
             }
-            
-            
-            //Debug.Print("show info");
-            //Debug.Print(FileNameGrid.Margin.ToString());
-            //Thumbs.SetValue(ScrollViewer.CanContentScrollProperty, false); //not working
-            //ThumbScroll.CanContentScroll = false;
+        }
+
+        private void HideInfo()
+        {
+            FileInfoGrid.Visibility = Visibility.Hidden;
+            currentPicIndex = infoContextItemIndex;
+            infoContextItemIndex = -1;
+            ThumbScroll.Focus();
         }
 
         private void ExtractShow_Click(object sender, RoutedEventArgs e)
@@ -2537,7 +2616,7 @@ namespace GymnasticsVideoGallery
                         if (i < currentPicIndex) //thumbnail view, cursor is at a greater position than the removed element
                         {
                             currentPicIndex--;
-                            PositionBorderRect(currentPicIndex,true); //color is not affected.
+                            PositionBorderRect(currentPicIndex, true); //color is not affected.
                         }
                         else if (i == currentPicIndex) //thumbnail or video view, deleted at cursor. In video view, currentPicIndex should go to the next, and not be reset.
                         {
@@ -3018,12 +3097,12 @@ namespace GymnasticsVideoGallery
         private void MainWindow1_Activated(object sender, EventArgs e) //runs on startup too instead of skillslist_selectionchanged.
         {
             //Debug.Print("MainWindow1_Activated");
-            if (!dialogActivation && Directory.Exists(settings["SkillsPath"])) // if we are not coming from a msgbox, or are at the default page.
+            if (!dialogActivation && System.IO.Directory.Exists(settings["SkillsPath"])) // if we are not coming from a msgbox, or are at the default page.
             {
                 //refresh directory list
                 int oldIndex = SkillsList.SelectedIndex;
 
-                string[] contents = Directory.GetDirectories(settings["SkillsPath"]);               
+                string[] contents = System.IO.Directory.GetDirectories(settings["SkillsPath"]);               
                 List<string> SkillsListSource_new = new List<string>();
                 SkillsListSource_new.Add(".");
                 foreach (string dirName in contents)
@@ -3087,7 +3166,7 @@ namespace GymnasticsVideoGallery
         {
             changedByProgramInit = false;
             Debug.Print("MainWindow1_Loaded");
-            if (Directory.Exists(settings["SkillsPath"]))
+            if (System.IO.Directory.Exists(settings["SkillsPath"]))
             {
                 FocusListItem();
             }
@@ -3201,12 +3280,7 @@ namespace GymnasticsVideoGallery
             }
             if (FileInfoGrid.Visibility == Visibility.Visible) //the click should only close the info box
             {
-                FileInfoGrid.Visibility = Visibility.Hidden;
-                currentPicIndex = infoContextItemIndex;
-                infoContextItemIndex = -1;
-                // ThumbScroll.Focusable = true;
-                ThumbScroll.Focus();
-                // ThumbScroll.Focusable = false;
+                HideInfo();
                 noContentLoad = true;
                 e.Handled = true;
             }
@@ -3588,7 +3662,7 @@ namespace GymnasticsVideoGallery
             }
             else if (FileInfoGrid.Visibility == Visibility.Visible)
             {
-                if (e.Key != Key.Escape && e.Key != Key.Enter)
+                if (e.Key != Key.Escape && e.Key != Key.Enter && e.Key != Key.Left && e.Key != Key.Right && e.Key != Key.Up && e.Key != Key.Down && e.Key != Key.PageUp && e.Key != Key.PageDown && e.Key != Key.I)
                 {
                     return;
                 }
@@ -3649,12 +3723,7 @@ namespace GymnasticsVideoGallery
                     Debug.Print("Key.Escape currentCommentPosIndex " + currentCommentPosIndex);
                     if (FileInfoGrid.Visibility == Visibility.Visible) //the click should only close the info box
                     {
-                        FileInfoGrid.Visibility = Visibility.Hidden;
-                        currentPicIndex = infoContextItemIndex;
-                        infoContextItemIndex = -1;
-                        // ThumbScroll.Focusable = true;
-                        ThumbScroll.Focus();
-                        // ThumbScroll.Focusable = false;
+                        HideInfo();
                     }
                     else if (settingsPageOpen)
                     {
@@ -3680,7 +3749,7 @@ namespace GymnasticsVideoGallery
                         //exiting enlarged view.
                         if (isPictureFullscreen && (Math.Round(ImageElement1.ActualWidth) > Math.Round(MainGrid.ActualWidth) || Math.Round(ImageElement1.ActualHeight) > Math.Round(MainGrid.ActualHeight))) //if in actualSizeView, and the image is larger than the screen
                         {
-                            SetImageActualSize(null, null);
+                            SwitchActualSize(null, null);
                         }
                         else
                         {
@@ -3778,7 +3847,7 @@ namespace GymnasticsVideoGallery
                     }
                     else if (isPictureFullscreen)
                     {
-                        SetImageActualSize(null,null);
+                        SwitchActualSize(null,null);
                     }
                     break;
 
@@ -3819,11 +3888,7 @@ namespace GymnasticsVideoGallery
                                 TimelineSlider.Value = middleIndexPos;
                             }
                         }                        
-                        else if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) //previous media
-                        {
-                            PrevContent();
-                        }
-                        else //jump or frame step
+                        else if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) //jump or frame step
                         {
                             if (isPlaying) //jump while playing
                             {
@@ -3832,7 +3897,7 @@ namespace GymnasticsVideoGallery
                             }
                             else //frame step
                             {
-                                if (settings["SkillsPath"] != "" && File.Exists(OrigToIndex(videoSource))) // if the index of frame exists
+                                if (settings["SkillsPath"] != "" && File.Exists(OrigToIndex(videoSource))) //if the index of frame exists
                                 {
                                     currentFrameIndex--;
                                     if (currentFrameIndex >= 0)
@@ -3857,27 +3922,34 @@ namespace GymnasticsVideoGallery
                                 }
                             }
                         }
+                        else //jump or frame step
+                        {
+                            PrevContent();
+                        }
                         e.Handled = true;
                     }
-                    else if (isPictureFullscreen) //previous media
+                    else if (isPictureFullscreen) //previous media or move picture. Pressing shift will switch media.
                     {
-                        if (Math.Round(ImageElement1.ActualWidth) > Math.Round(MainGrid.ActualWidth) || Math.Round(ImageElement1.ActualHeight) > Math.Round(MainGrid.ActualHeight)) //if in actualSizeView, and the image is larger than the screen
+                        if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
                         {
-                            if (Math.Round(ImageElement1.ActualWidth) > Math.Round(MainGrid.ActualWidth))
+                            if (Math.Round(ImageElement1.ActualWidth) > Math.Round(MainGrid.ActualWidth) || Math.Round(ImageElement1.ActualHeight) > Math.Round(MainGrid.ActualHeight)) //if in actualSizeView, and the image is larger than the screen
                             {
-                                double left = ImageElement1.Margin.Left;
-                                double top = ImageElement1.Margin.Top;
-                                double newLeft = left + settings["ImageMoveStep"];
-                                newLeft = newLeft > 0 ? 0 : newLeft;
-                                ImageElement1.Margin = new Thickness(newLeft, top, 0, 0);
+                                if (Math.Round(ImageElement1.ActualWidth) > Math.Round(MainGrid.ActualWidth))
+                                {
+                                    double left = ImageElement1.Margin.Left;
+                                    double top = ImageElement1.Margin.Top;
+                                    double newLeft = left + settings["ImageMoveStep"];
+                                    newLeft = newLeft > 0 ? 0 : newLeft;
+                                    ImageElement1.Margin = new Thickness(newLeft, top, 0, 0);
+                                    lastActualLeft = newLeft;
+                                }
                             }
                         }
                         else
                         {
                             PrevContent();
                             e.Handled = true;
-                        }
-                            
+                        }                            
                     }
                     else if (currentPicIndex != -1 && !settingsPageOpen) //moving cursor rectangle
                     {
@@ -3891,6 +3963,11 @@ namespace GymnasticsVideoGallery
                             {
                                 currentPicIndex = newIndex;
                                 PositionBorderRect(currentPicIndex, true);
+
+                                if (FileInfoGrid.Visibility == Visibility.Visible)
+                                {
+                                    Context_ShowInfo(null, null);
+                                }
                             }
                         }
                     }
@@ -3933,11 +4010,7 @@ namespace GymnasticsVideoGallery
                                 TimelineSlider.Value = middleIndexPos;
                             }
                         }                        
-                        else if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) //next media
-                        {
-                            NextContent(true);
-                        }
-                        else //jump or frame step
+                        else if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) //jump or frame step
                         {
                             if (isPlaying) //jump while playing
                             {
@@ -3980,19 +4053,27 @@ namespace GymnasticsVideoGallery
                                 }
                             }
                         }
+                        else
+                        {
+                            NextContent(true);
+                        }
                         e.Handled = true;
                     }
-                    else if (isPictureFullscreen) //move enlarged picture, or next media
+                    else if (isPictureFullscreen) //next media or move picture. Pressing shift will switch media.
                     {
-                        if (Math.Round(ImageElement1.ActualWidth) > Math.Round(MainGrid.ActualWidth) || Math.Round(ImageElement1.ActualHeight) > Math.Round(MainGrid.ActualHeight)) //if in actualSizeView, and the image is larger than the screen
+                        if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
                         {
-                            if (Math.Round(ImageElement1.ActualWidth) > Math.Round(MainGrid.ActualWidth))
+                            if (Math.Round(ImageElement1.ActualWidth) > Math.Round(MainGrid.ActualWidth) || Math.Round(ImageElement1.ActualHeight) > Math.Round(MainGrid.ActualHeight)) //if in actualSizeView, and the image is larger than the screen
                             {
-                                double left = ImageElement1.Margin.Left;
-                                double top = ImageElement1.Margin.Top;
-                                double newLeft = left - settings["ImageMoveStep"];
-                                newLeft = newLeft < MainGrid.ActualWidth - ImageElement1.ActualWidth ? MainGrid.ActualWidth - ImageElement1.ActualWidth : newLeft;
-                                ImageElement1.Margin = new Thickness(newLeft, top, 0, 0);
+                                if (Math.Round(ImageElement1.ActualWidth) > Math.Round(MainGrid.ActualWidth))
+                                {
+                                    double left = ImageElement1.Margin.Left;
+                                    double top = ImageElement1.Margin.Top;
+                                    double newLeft = left - settings["ImageMoveStep"];
+                                    newLeft = newLeft < MainGrid.ActualWidth - ImageElement1.ActualWidth ? MainGrid.ActualWidth - ImageElement1.ActualWidth : newLeft;
+                                    ImageElement1.Margin = new Thickness(newLeft, top, 0, 0);
+                                    lastActualLeft = newLeft;
+                                }
                             }
                         }
                         else
@@ -4012,6 +4093,11 @@ namespace GymnasticsVideoGallery
                             {
                                 currentPicIndex = newIndex;
                                 PositionBorderRect(currentPicIndex, true);
+
+                                if (FileInfoGrid.Visibility == Visibility.Visible)
+                                {
+                                    Context_ShowInfo(null, null);
+                                }
                             }
                         }
                     }
@@ -4045,6 +4131,7 @@ namespace GymnasticsVideoGallery
                                 double newTop = top - settings["ImageMoveStep"];
                                 newTop = newTop < MainGrid.ActualHeight - ImageElement1.ActualHeight ? MainGrid.ActualHeight - ImageElement1.ActualHeight : newTop;
                                 ImageElement1.Margin = new Thickness(left, newTop, 0, 0);
+                                lastActualTop = newTop;
                             }
                         }
                     }
@@ -4060,6 +4147,11 @@ namespace GymnasticsVideoGallery
                             {
                                 currentPicIndex = newIndex;
                                 PositionBorderRect(currentPicIndex, true);
+
+                                if (FileInfoGrid.Visibility == Visibility.Visible)
+                                {
+                                    Context_ShowInfo(null, null);
+                                }
                             }
                             e.Handled = true;
                         }
@@ -4095,6 +4187,7 @@ namespace GymnasticsVideoGallery
                                 double newTop = top + settings["ImageMoveStep"];
                                 newTop = newTop > 0 ? 0 : newTop;
                                 ImageElement1.Margin = new Thickness(left, newTop, 0, 0);
+                                lastActualTop = newTop;
                             }
                         }
                     }
@@ -4110,6 +4203,11 @@ namespace GymnasticsVideoGallery
                             {
                                 currentPicIndex = newIndex;
                                 PositionBorderRect(currentPicIndex, true);
+
+                                if (FileInfoGrid.Visibility == Visibility.Visible)
+                                {
+                                    Context_ShowInfo(null, null);
+                                }
                             }
                             e.Handled = true;
                         }
@@ -4119,12 +4217,7 @@ namespace GymnasticsVideoGallery
                 case Key.Enter:
                     if (FileInfoGrid.Visibility == Visibility.Visible) //the close the info box
                     {
-                        FileInfoGrid.Visibility = Visibility.Hidden;
-                        currentPicIndex = infoContextItemIndex;
-                        infoContextItemIndex = -1;
-                        // ThumbScroll.Focusable = true;
-                        ThumbScroll.Focus();
-                        // ThumbScroll.Focusable = false;
+                        HideInfo();
                     }
                     else if (!isVideoFullscreen && !isPictureFullscreen && currentPicIndex != -1 && !settingsPageOpen) //loading cursor rectangle content
                     {
@@ -4193,6 +4286,11 @@ namespace GymnasticsVideoGallery
                             {
                                 currentPicIndex = newIndex;
                                 PositionBorderRect(currentPicIndex, true);
+
+                                if (FileInfoGrid.Visibility == Visibility.Visible)
+                                {
+                                    Context_ShowInfo(null, null);
+                                }
                             }
                             e.Handled = true;
                         }
@@ -4242,6 +4340,11 @@ namespace GymnasticsVideoGallery
                             {
                                 currentPicIndex = newIndex;
                                 PositionBorderRect(currentPicIndex, true);
+
+                                if (FileInfoGrid.Visibility == Visibility.Visible)
+                                {
+                                    Context_ShowInfo(null, null);
+                                }
                             }
                             e.Handled = true;
                         }
@@ -4291,13 +4394,22 @@ namespace GymnasticsVideoGallery
 
                 case Key.I:
                     Debug.Print("Key.I currentPicIndex " + currentPicIndex + " " + ThumbScroll.IsFocused + " " + FocusManager.GetFocusedElement(this));
-                    if (!settingsPageOpen && currentPicIndex != -1 && (ThumbScroll.IsFocused || FocusManager.GetFocusedElement(this) is System.Windows.Controls.TextBox)) //if we close a comment, the focus remains on the textbox.
+
+                    if (FileInfoGrid.Visibility == Visibility.Visible) //the close the info box
                     {
-                        Context_ShowInfo(null, null);
+                        HideInfo();
                     }
-                    else if (isPictureFullscreen || isVideoFullscreen) //for external files
+                    else
                     {
-                        Context_ShowInfo(null, null);
+                        if (!settingsPageOpen && currentPicIndex != -1 && (ThumbScroll.IsFocused || FocusManager.GetFocusedElement(this) is System.Windows.Controls.TextBox)) //if we close a comment, the focus remains on the textbox.
+                        {
+                            Context_ShowInfo(null, null);
+                        }
+                        else if (isPictureFullscreen || isVideoFullscreen) //for external files
+                        {
+
+                            Context_ShowInfo(null, null);
+                        }
                     }
                     break;
 
@@ -4345,7 +4457,7 @@ namespace GymnasticsVideoGallery
                     }
                     break;
                 case Key.F7: //changes fullscreen state in thumbnail and settings view
-                    if (!isVideoFullscreen && !isPictureFullscreen && !settingsPageOpen && Directory.Exists(settings["SkillsPath"])) //no exit fullscreen in view mode.
+                    if (!isVideoFullscreen && !isPictureFullscreen && !settingsPageOpen && System.IO.Directory.Exists(settings["SkillsPath"])) //no exit fullscreen in view mode.
                     {
                         ListNew_Click(null,null);
                     }
@@ -5025,6 +5137,11 @@ namespace GymnasticsVideoGallery
             {
                 Debug.Print("LoadVideo, fileName: " + fileName);
 
+                if (FileInfoGrid.Visibility == Visibility.Visible)
+                {
+                    Context_ShowInfo(null, null);
+                }
+
                 //Debug.Print("LoadVideo: ThumbScroll.ScrollableHeight: " + ThumbScroll.ScrollableHeight);
                 isPictureFullscreen = false;
                 ImageElement1.Source = null;
@@ -5121,6 +5238,11 @@ namespace GymnasticsVideoGallery
         {
             Debug.Print("LoadPicture " + fileName);
 
+            if (FileInfoGrid.Visibility == Visibility.Visible)
+            {
+                Context_ShowInfo(null, null);
+            }
+
             isVideoFullscreen = false;
             isPictureFullscreen = true;
             MediaElement1.Source = null;
@@ -5174,15 +5296,22 @@ namespace GymnasticsVideoGallery
                 }
                 else
                 {
-                    SetImageOrigSize(imageBitmap);
-                    ActualSize.Source = new BitmapImage(new Uri(resourceDir + "actualsize.png", UriKind.Absolute));
-                    actualSizeView = false;
+                    if (actualSizeView)
+                    {
+                        actualSizeView = false;
+                        SwitchActualSize(null, null);
+                    }
+                    else
+                    {
+                        SetImageOrigSize(imageBitmap);
+                        ActualSize.Source = new BitmapImage(new Uri(resourceDir + "actualsize.png", UriKind.Absolute));
+
+                        lastActualLeft = null; //indicating that it is unset. It can range from negative values to positive for smaller than screen images.
+                        lastActualTop = null;
+                    }
                 }
             }            
             
-            lastActualLeft = 1000000; //indicating that it is unset. It can range from negative values to positive for smaller than screen images.
-            lastActualTop = 1000000;
-
             if (settings["SliderIsLocked"]) //here we  don't have to check mouse position, mousemove call will take care of it.
             {
                 PictureControlGrid.Visibility = Visibility.Visible;
@@ -5276,7 +5405,7 @@ namespace GymnasticsVideoGallery
 
         private void ExitView()
         {
-            Debug.Print("Exitview currentPicIndex: " + currentPicIndex + isVideoFullscreen + isPictureFullscreen);
+            Debug.Print("Exitview currentPicIndex: " + currentPicIndex + " " + isVideoFullscreen + " " + isPictureFullscreen);
             if (isVideoFullscreen)
             {
                 ExitVideo();
@@ -5285,12 +5414,19 @@ namespace GymnasticsVideoGallery
             else if (isPictureFullscreen)
             {
                 ExitPicture();
+                lastActualLeft = null;
+                lastActualTop = null;
+            }
+            if (FileInfoGrid.Visibility == Visibility.Visible)
+            {
+                FileInfoGrid.Visibility = Visibility.Hidden; //almost as in HideInfo, we just do not set currentPicIndex (it should be -1 when we exit at start)
+                infoContextItemIndex = -1;
+                ThumbScroll.Focus();
             }
 
             currentPicIndexExt = -1; //important for deletion. If we exited from external directory into the program, we need to know later we are now watching the internal contents.
 
             //ThumbScroll.CanContentScroll = true;
-            Debug.Print("Exitview2");
 
             this.Background = Brushes.Gray;
             //SkillsList.Visibility = Visibility.Visible;
@@ -5298,8 +5434,6 @@ namespace GymnasticsVideoGallery
             Splitter.Visibility = Visibility.Visible;
             ToolbarAndThumbs.Visibility = Visibility.Visible;
             ExitFullScreen(false);
-
-            Debug.Print("Exitview3");
 
             //set cursor rectangle
             if (currentPicIndex != -1)
@@ -5378,9 +5512,6 @@ namespace GymnasticsVideoGallery
         {
             isPictureFullscreen = false;
             ImageElement1.Source = null;
-            ImageElement1.Width = MainGrid.ActualWidth;
-            ImageElement1.Height = MainGrid.ActualHeight;
-            ImageElement1.Margin = new Thickness(0);
             PictureFilenameText.Text = "";
             this.Cursor = System.Windows.Input.Cursors.Arrow;
             pictureExiting = true; //needed to prevent context menu showing up upon right-clicking which exited the view.
@@ -5397,47 +5528,47 @@ namespace GymnasticsVideoGallery
         private int moveStartY;
         private int imageStartX;
         private int imageStartY;
-        private double lastActualLeft;
-        private double lastActualTop;
+        private double? lastActualLeft;
+        private double? lastActualTop;
 
         private void ActualSize_ToolTipOpening(object sender, ToolTipEventArgs e)
         {
             ActualSize.ToolTip = actualSizeView ? "Screen size" : "Actual size";
         }
 
-        private void SetImageActualSize(object sender, RoutedEventArgs e) // what if image is smaller than screen?
+        private void SwitchActualSize(object sender, RoutedEventArgs e)
         {
-            Debug.Print("SetImageActualSize actualSizeView " + actualSizeView  + " " + ImageElement1.ActualWidth + " " + MainGrid.ActualWidth + " " + ImageElement1.ActualHeight + " " + MainGrid.ActualHeight);
+            Debug.Print("SwitchActualSize actualSizeView " + actualSizeView  + " " + ImageElement1.ActualWidth + " " + MainGrid.ActualWidth + " " + ImageElement1.ActualHeight + " " + MainGrid.ActualHeight + " lastActualLeft " + lastActualLeft + " lastActualTop " + lastActualTop);
 
             BitmapImage b = (BitmapImage)ImageElement1.Source;
             if (!actualSizeView)
-            //if (Math.Round(ImageElement1.ActualWidth) == Math.Round(MainGrid.ActualWidth) || Math.Round(ImageElement1.ActualHeight) == Math.Round(MainGrid.ActualHeight)) //default stretch mode. If image proportions are not the screen proportions, the image will be narrower or shorter.
-            //There may be -2,27373675443232E-13 difference between the double values, so Math.Round has to be used.
             {
-                ImageElement1.Width = b.PixelWidth;
-                ImageElement1.Height = b.PixelHeight;
-                if (lastActualLeft != 1000000 && lastActualTop != 1000000)
-                {
-                    ImageElement1.Margin = new Thickness(lastActualLeft, lastActualTop, 0, 0);
-                }
-                else
-                {
-                    //Debug.Print(b.PixelWidth + " " + b.PixelHeight + " " + ImageElement1.ActualWidth + " " + this.ActualWidth + " " + MainGrid.ActualWidth);
-                    double newLeft = -(b.PixelWidth - MainGrid.ActualWidth) / 2;
-                    double newTop = -(b.PixelHeight - MainGrid.ActualHeight) / 2;                    
-                    ImageElement1.Margin = new Thickness(newLeft, newTop, 0, 0);
-                }                
-                ActualSize.Source = new BitmapImage(new Uri(resourceDir + "origsize.png", UriKind.Absolute));
-                actualSizeView = true;
+                SetImageActualSize(b);
             }
             else
             {
-                lastActualLeft = ImageElement1.Margin.Left;
-                lastActualTop = ImageElement1.Margin.Top;
                 SetImageOrigSize(b);
-                ActualSize.Source = new BitmapImage(new Uri(resourceDir + "actualsize.png", UriKind.Absolute));
-                actualSizeView = false;
             }
+        }
+
+        private void SetImageActualSize(BitmapImage b)
+        {
+            ImageElement1.Width = b.PixelWidth;
+            ImageElement1.Height = b.PixelHeight;
+            if (lastActualLeft != null && lastActualTop != null)
+            {
+                ImageElement1.Margin = new Thickness((double)lastActualLeft, (double)lastActualTop, 0, 0);
+            }
+            else
+            {
+                double newLeft = -(b.PixelWidth - MainGrid.ActualWidth) / 2;
+                double newTop = -(b.PixelHeight - MainGrid.ActualHeight) / 2;
+                ImageElement1.Margin = new Thickness(newLeft, newTop, 0, 0);
+                lastActualLeft = newLeft;
+                lastActualTop = newTop;
+            }
+            ActualSize.Source = new BitmapImage(new Uri(resourceDir + "origsize.png", UriKind.Absolute));
+            actualSizeView = true;
         }
 
         private void SetImageOrigSize(BitmapImage b)
@@ -5460,6 +5591,8 @@ namespace GymnasticsVideoGallery
             ImageElement1.Width = w;
             ImageElement1.Height = h;
             ImageElement1.Margin = new Thickness((MainGrid.ActualWidth - w) / 2, (MainGrid.ActualHeight - h) / 2, 0, 0);
+            ActualSize.Source = new BitmapImage(new Uri(resourceDir + "actualsize.png", UriKind.Absolute));
+            actualSizeView = false;
         }
 
         private void ImageElement1_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -5497,6 +5630,8 @@ namespace GymnasticsVideoGallery
                 }
                 Debug.Print("ImageElement1_MouseMove2 " + left + " " + top);
                 ImageElement1.Margin = new Thickness(left, top, 0, 0);
+                lastActualLeft = left;
+                lastActualTop = top;
             }
         }
 
@@ -6137,7 +6272,7 @@ namespace GymnasticsVideoGallery
             try //when a selected folder is renamed outside of program, the folder we got from the thumb name does not exit anymore. LoadContent calls this function.  
             //if the file is renamed, no error will occur, instead the function returns null.
             {
-                return Directory.GetFiles((string)settings["SkillsPath"], selectedFile).FirstOrDefault(); //Gets the case-sensitive file name.
+                return System.IO.Directory.GetFiles((string)settings["SkillsPath"], selectedFile).FirstOrDefault(); //Gets the case-sensitive file name.
             }
             catch (Exception)
             {
@@ -6183,9 +6318,6 @@ namespace GymnasticsVideoGallery
             int pos = thumbName.LastIndexOf(settings["FileNameSeparator"]);
             int periodPos = thumbName.LastIndexOf(".");
             string end = thumbName.Substring(pos + 1, periodPos - pos - 1);
-
-            var regex = new Regex(Regex.Escape(settings["FileNameSeparator"]));
-            string selectedFileName;
 
             if (end == "mp4")
             {
@@ -6344,7 +6476,7 @@ namespace GymnasticsVideoGallery
                 string[] folders = new string[] { "Thumbnails", "Indexes", "Comments" };
                 foreach (string folder in folders)
                 {
-                    string[] files = Directory.GetFiles(rootDir + @"\" + folder);
+                    string[] files = System.IO.Directory.GetFiles(rootDir + @"\" + folder);
                     foreach (string origFile in files)
                     {
                         string newFile = origFile.Replace(settings["FileNameSeparator"], changedSettings["FileNameSeparator"]);
@@ -6441,7 +6573,7 @@ namespace GymnasticsVideoGallery
 
             if (changedSettings.ContainsKey("SkillsPath")) //if the root folder was changed
             {
-                if (!Directory.Exists(settings["SkillsPath"]))
+                if (!System.IO.Directory.Exists(settings["SkillsPath"]))
                 {
                     //clear thumbnails, and set start page underneath settings.
                     //Msgbox("The selected directory does not exist.");
@@ -6853,7 +6985,7 @@ namespace GymnasticsVideoGallery
 
         private void SkillsList_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
-            if (!Directory.Exists(settings["SkillsPath"]))
+            if (!System.IO.Directory.Exists(settings["SkillsPath"]))
             {
                 e.Handled = true;
             }
@@ -6923,7 +7055,7 @@ namespace GymnasticsVideoGallery
 
             if (confirmResult == MessageBoxResult.Yes)
             {
-                Directory.Delete(settings["SkillsPath"] + skillsListItem, true);
+                System.IO.Directory.Delete(settings["SkillsPath"] + skillsListItem, true);
 
                 SkillsListSource.RemoveAt(skillsListIndex); //no re-sorting needed
                 changedByProgramList = true;
@@ -6954,7 +7086,7 @@ namespace GymnasticsVideoGallery
                     }
                     else //rename folder in file system.
                     {
-                        if (Directory.Exists(settings["SkillsPath"] + newName))
+                        if (System.IO.Directory.Exists(settings["SkillsPath"] + newName))
                         {
                             dialogActivation = true;
                             var confirmResult = System.Windows.MessageBox.Show("This directory already exists. Do you want to overwrite it?", "Confirm overwrite", MessageBoxButton.YesNo);
@@ -6962,7 +7094,7 @@ namespace GymnasticsVideoGallery
 
                             if (confirmResult == MessageBoxResult.Yes)
                             {
-                                Directory.Delete(settings["SkillsPath"] + newName, true);
+                                System.IO.Directory.Delete(settings["SkillsPath"] + newName, true);
                                 SkillsListSource.Remove(newName);
                                 RenameDir(skillsListItem, newName, false);
                             }
@@ -6995,7 +7127,7 @@ namespace GymnasticsVideoGallery
                     ListNewFieldWindow.Visibility = Visibility.Hidden;
                     string newName = RemoveIllegalChars(ListNewField.Text);
                     //create folder, but before that we check if it already exists.
-                    if (Directory.Exists(settings["SkillsPath"] + newName))
+                    if (System.IO.Directory.Exists(settings["SkillsPath"] + newName))
                     {
                         dialogActivation = true;
                         var confirmResult = System.Windows.MessageBox.Show("This directory already exists. Do you want to overwrite it?", "Confirm overwrite", MessageBoxButton.YesNo);
@@ -7003,7 +7135,7 @@ namespace GymnasticsVideoGallery
 
                         if (confirmResult == MessageBoxResult.Yes)
                         {
-                            Directory.Delete(settings["SkillsPath"] + newName, true);
+                            System.IO.Directory.Delete(settings["SkillsPath"] + newName, true);
 
                             //the new dir might only differ in case from an existing one.
                             string removeDir="";
@@ -7042,7 +7174,7 @@ namespace GymnasticsVideoGallery
 
         private void NewDir(string newName)
         {
-            Directory.CreateDirectory(settings["SkillsPath"] + newName);
+            System.IO.Directory.CreateDirectory(settings["SkillsPath"] + newName);
             SkillsListSource.Add(newName);
             Debug.Print("NewDir adding " + newName);
             Debug.Print("NewDird adding " + newName);
@@ -7094,7 +7226,7 @@ namespace GymnasticsVideoGallery
                 if (vertOffset > ListScroll.ScrollableHeight) vertOffset = ListScroll.ScrollableHeight; //not necessary
                 ListScroll.ScrollToVerticalOffset(vertOffset);
             }
-            //selected item does not change to the new directory. So we can pull files to it from the current one.
+            //selected item does not change to the new System.IO.Directory. So we can pull files to it from the current one.
         }
 
         private void RenameDir(string oldName, string newName, bool caseChange)
@@ -7104,12 +7236,12 @@ namespace GymnasticsVideoGallery
             {
                 String timeStamp = DateTime.Now.Ticks.ToString();
                 Debug.Print("RenameDir, Timestamp: " + timeStamp);
-                Directory .Move(settings["SkillsPath"] + oldName, settings["SkillsPath"] + oldName + timeStamp);
-                Directory.Move(settings["SkillsPath"] + oldName + timeStamp, settings["SkillsPath"] + newName);
+                System.IO.Directory.Move(settings["SkillsPath"] + oldName, settings["SkillsPath"] + oldName + timeStamp);
+                System.IO.Directory.Move(settings["SkillsPath"] + oldName + timeStamp, settings["SkillsPath"] + newName);
             }
             else
             {
-                Directory.Move(settings["SkillsPath"] + oldName, settings["SkillsPath"] + newName);
+                System.IO.Directory.Move(settings["SkillsPath"] + oldName, settings["SkillsPath"] + newName);
             }            
             SkillsListSource.Remove(oldName);
             SkillsListSource.Add(newName);
@@ -7126,7 +7258,7 @@ namespace GymnasticsVideoGallery
             string[] folders = new string[] { "Thumbnails", "Indexes", "Comments" };
             foreach (string folder in folders)
             {
-                IEnumerable<string> files = Directory.EnumerateFiles(rootDir + folder + @"\", oldName + settings["FileNameSeparator"] + "*.jpg");
+                IEnumerable<string> files = System.IO.Directory.EnumerateFiles(rootDir + folder + @"\", oldName + settings["FileNameSeparator"] + "*.jpg");
                 foreach (string file in files)
                 {
                     string newFile = file.Replace(oldName + settings["FileNameSeparator"], newName + settings["FileNameSeparator"]);
@@ -7393,7 +7525,7 @@ namespace GymnasticsVideoGallery
         private void MainWindow1_Drop(object sender, System.Windows.DragEventArgs e) //dropping file anywhere, or into SkillsList, where the selection changes (unnotified)
         {
             Debug.Print("MainWindow1_Drop");
-            if (!Directory.Exists(settings["SkillsPath"]))
+            if (!System.IO.Directory.Exists(settings["SkillsPath"]))
             {
                 dialogActivation = true;
                 System.Windows.MessageBox.Show("No start directory is set.");
@@ -7859,7 +7991,7 @@ namespace GymnasticsVideoGallery
             foreach (string dirName in SkillsListSource)
             {
                 string dirPath = (dirName == ".") ? settings["SkillsPath"] : settings["SkillsPath"] + dirName + @"\";
-                string[] files = Directory.GetFiles(dirPath);
+                string[] files = System.IO.Directory.GetFiles(dirPath);
                 //Debug.Print(dirPath + " " + files.Length);
                 foreach (string origFile in files)
                 {
@@ -7934,7 +8066,7 @@ namespace GymnasticsVideoGallery
             foreach (string dirName in SkillsListSource)
             {
                 string dirPath = (dirName == ".") ? settings["SkillsPath"] : settings["SkillsPath"] + dirName + @"\";
-                string[] files = Directory.GetFiles(dirPath);
+                string[] files = System.IO.Directory.GetFiles(dirPath);
                 foreach (string origFile in files)
                 {
                     if (System.IO.Path.GetExtension(origFile).ToLower() == ".mp4")
@@ -7967,7 +8099,7 @@ namespace GymnasticsVideoGallery
         private void GenerateAllIndexesInFolderProcess(string dirName)
         {
             string dirPath = (dirName == ".") ? settings["SkillsPath"] : settings["SkillsPath"] + dirName + @"\";
-            List<string> files = Directory.GetFiles(dirPath).ToList<string>();
+            List<string> files = System.IO.Directory.GetFiles(dirPath).ToList<string>();
             files.Sort();
             //Debug.Print("GenerateAllIndexesInFolder dirPath: " + dirPath + " files.Length: " + files.Length);
             foreach (string origFile in files)
@@ -8025,7 +8157,7 @@ namespace GymnasticsVideoGallery
             try
             {
                 string dir = rootDir + type + @"\";
-                string[] files = Directory.GetFiles(dir);
+                string[] files = System.IO.Directory.GetFiles(dir);
                 int i = 0;
                 foreach (string file in files)
                 {

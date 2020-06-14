@@ -364,7 +364,7 @@
             </Grid.Background>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <Image x:Name="PictureButtonLock" Width="25" Height="25" Margin="10,0,18,0" MouseLeftButtonDown="ButtonLock_Click" ToolTipOpening="ButtonLock_ToolTipOpening" />
-                <Image x:Name="ActualSize" Width="19" Height="19" Margin="0" MouseLeftButtonDown="SetImageActualSize" ToolTipOpening="ActualSize_ToolTipOpening" ToolTip="Actual size" />
+                <Image x:Name="ActualSize" Width="19" Height="19" Margin="0" MouseLeftButtonDown="SwitchActualSize" ToolTipOpening="ActualSize_ToolTipOpening" ToolTip="Actual size" />
                 <Image x:Name="PictureButtonPrevious" Width="15" Height="15" ToolTip="Previous" Margin="18,0,23,0" MouseLeftButtonDown="ButtonPrevious_Click" />
                 <Image x:Name="PictureButtonNext" Width="15" Height="15" ToolTip="Next" Margin="23,0,10,0" MouseLeftButtonDown="ButtonNext_Click" />
                 <TextBlock x:Name="PictureFilenameText" HorizontalAlignment="Right" Margin="5,0,10,0" TextWrapping="Wrap" Text="" VerticalAlignment="Center" />
