@@ -3662,7 +3662,7 @@ namespace GymnasticsVideoGallery
             }
             else if (FileInfoGrid.Visibility == Visibility.Visible)
             {
-                if (e.Key != Key.Escape && e.Key != Key.Enter && e.Key != Key.Left && e.Key != Key.Right && e.Key != Key.Up && e.Key != Key.Down && e.Key != Key.PageUp && e.Key != Key.PageDown && e.Key != Key.I)
+                if (e.Key != Key.Escape && e.Key != Key.Enter && e.Key != Key.Left && e.Key != Key.Right && e.Key != Key.Up && e.Key != Key.Down && e.Key != Key.PageUp && e.Key != Key.PageDown && e.Key != Key.I && e.Key != Key.A)
                 {
                     return;
                 }
@@ -4464,8 +4464,8 @@ namespace GymnasticsVideoGallery
                     break;
 
                 case Key.F11: //changes fullscreen state in thumbnail and settings view
-                    if (!isVideoFullscreen && !isPictureFullscreen) //no exit fullscreen in view mode.
-                    {
+                    //if (!isVideoFullscreen && !isPictureFullscreen) //no exit fullscreen in view mode.
+                    //{
                         if (this.WindowStyle == WindowStyle.None)
                         {
                             ExitFullScreen(true);
@@ -4474,7 +4474,7 @@ namespace GymnasticsVideoGallery
                         {
                             EnterFullScreen(true);
                         }
-                    }
+                    //}
                     break;
             }
         }
@@ -5173,10 +5173,10 @@ namespace GymnasticsVideoGallery
 
                 isVideoFullscreen = true; //have to come after setting the frames to an empty list, otherwise the extraction process will be unable to add items to an undefined list. 
 
-                if (this.WindowStyle != WindowStyle.None) //have to come after setting isVideoFullScreen, for correctly handling the window events.
+                /*if (this.WindowStyle != WindowStyle.None) //have to come after setting isVideoFullScreen, for correctly handling the window events.
                 {
                     EnterFullScreen(false);
-                }
+                }*/
 
                 //Debug.Print("loadvideo, controlgrid visible? " + MainGrid.ActualHeight + " " + VideoControlGrid.ActualHeight + " " + System.Windows.Forms.Cursor.Position.Y +  " " + Mouse.GetPosition(MainGrid).Y);
                 //Mouse.GetPosition(MainGrid).Y gives 0, when deleting a picture, and loading a video. Not when we are just stepping forward.
@@ -5273,10 +5273,10 @@ namespace GymnasticsVideoGallery
                 this.Background = Brushes.White;
             }
 
-            if (this.WindowStyle != WindowStyle.None)
+            /*if (this.WindowStyle != WindowStyle.None)
             {
                 EnterFullScreen(false);
-            }
+            }*/
 
             //setting image size and position. Smaller than screen images will be shown in actual size.
             //Msgbox(imageBitmap.PixelWidth + " " + MainGrid.ActualWidth + " " + imageBitmap.PixelHeight + " " + MainGrid.ActualHeight);
@@ -5433,7 +5433,7 @@ namespace GymnasticsVideoGallery
             ListScroll.Visibility = Visibility.Visible;
             Splitter.Visibility = Visibility.Visible;
             ToolbarAndThumbs.Visibility = Visibility.Visible;
-            ExitFullScreen(false);
+            //ExitFullScreen(false);
 
             //set cursor rectangle
             if (currentPicIndex != -1)
