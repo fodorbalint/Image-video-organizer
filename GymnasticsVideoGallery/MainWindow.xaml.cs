@@ -3662,7 +3662,7 @@ namespace GymnasticsVideoGallery
             }
             else if (FileInfoGrid.Visibility == Visibility.Visible)
             {
-                if (e.Key != Key.Escape && e.Key != Key.Enter && e.Key != Key.Left && e.Key != Key.Right && e.Key != Key.Up && e.Key != Key.Down && e.Key != Key.PageUp && e.Key != Key.PageDown && e.Key != Key.I && e.Key != Key.A)
+                if (e.Key != Key.Escape && e.Key != Key.Enter && e.Key != Key.Left && e.Key != Key.Right && e.Key != Key.Up && e.Key != Key.Down && e.Key != Key.PageUp && e.Key != Key.PageDown && e.Key != Key.Home && e.Key != Key.End && e.Key != Key.I && e.Key != Key.A)
                 {
                     return;
                 }
@@ -4347,6 +4347,44 @@ namespace GymnasticsVideoGallery
                                 }
                             }
                             e.Handled = true;
+                        }
+                    }
+                    break;
+
+                case Key.Home: //works if focus is not on the directory list
+                    if (!isVideoFullscreen && !isPictureFullscreen && !settingsPageOpen)
+                    {
+                        ThumbScroll.ScrollToTop();
+
+                        if (currentPicIndex != -1)
+                        {
+                            int newIndex = 0;
+                            SelectMultiple(newIndex);
+                            currentPicIndex = newIndex;
+                            PositionBorderRect(currentPicIndex, true); //scroll position need not to be changed
+                            if (FileInfoGrid.Visibility == Visibility.Visible)
+                            {
+                                Context_ShowInfo(null, null);
+                            }
+                        }
+                    }
+                    break;
+
+                case Key.End:
+                    if (!isVideoFullscreen && !isPictureFullscreen && !settingsPageOpen)
+                    {
+                        ThumbScroll.ScrollToBottom();
+
+                        if (currentPicIndex != -1)
+                        {
+                            int newIndex = Thumbs.Children.Count - 1;
+                            SelectMultiple(newIndex);
+                            currentPicIndex = newIndex;
+                            PositionBorderRect(currentPicIndex, false); //scroll position need not to be changed
+                            if (FileInfoGrid.Visibility == Visibility.Visible)
+                            {
+                                Context_ShowInfo(null, null);
+                            }
                         }
                     }
                     break;
@@ -8162,7 +8200,15 @@ namespace GymnasticsVideoGallery
                 foreach (string file in files)
                 {
                     string thumbNameWoExt = System.IO.Path.GetFileNameWithoutExtension(file);
-                    string orig = settings["SkillsPath"] + thumbNameWoExt.Replace(settings["FileNameSeparator"], @"\") + ".mp4";
+                    string orig;
+                    if (thumbNameWoExt.Substring(thumbNameWoExt.Length - 3) == "mp4")
+                    {
+                        orig = settings["SkillsPath"] + thumbNameWoExt.Substring(0, thumbNameWoExt.Length - 4).Replace(settings["FileNameSeparator"], @"\") + ".mp4";
+                    }
+                    else
+                    {
+                        orig = settings["SkillsPath"] + System.IO.Path.GetFileName(file).Replace(settings["FileNameSeparator"], @"\");
+                    }
 
                     if (!File.Exists(orig) || orig.IndexOf(settings["SkillsPath"] + @".\") != -1)
                     {
