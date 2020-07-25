@@ -192,6 +192,19 @@ namespace GymnasticsVideoGallery
         //ObservableCollection<string> SkillsListSource;
         List<string> SkillsListSource;
 
+        private bool actualSizeView;
+        private bool movingImage;
+        private int moveStartX;
+        private int moveStartY;
+        private int imageStartX;
+        private int imageStartY;
+        private double? lastActualLeft;
+        private double? lastActualTop;
+        private int lastPixelWidth;
+        private int lastPixelHeight;
+
+        private string logFile = System.IO.Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName) + "/log.txt";
+
         #region Initializing
 
         public MainWindow()
@@ -200,6 +213,11 @@ namespace GymnasticsVideoGallery
             {
                 changedByProgramInit = true; //will prevent the window layout and list width from being updated into settings. Also speed ratio and volume.
                 InitializeComponent();
+
+                if (File.Exists(logFile))
+                {
+                    File.Delete(logFile);
+                }
 
                 FileOpen.Source = new BitmapImage(new Uri(resourceDir + "openfile.png", UriKind.Absolute));
                 ActionsOpen.Source = new BitmapImage(new Uri(resourceDir + "actions.png", UriKind.Absolute));
@@ -241,7 +259,7 @@ namespace GymnasticsVideoGallery
                 Thumb thumb = (TimelineSlider.Template.FindName("PART_Track", TimelineSlider) as Track).Thumb;
                 Track track = TimelineSlider.Template.FindName("PART_Track", TimelineSlider) as Track;
                 thumb.MouseEnter += new System.Windows.Input.MouseEventHandler(thumb_MouseEnter);*/
-                //Debug.Print(track.ToString());
+                //Log(track.ToString());
                 //track.MouseLeftButtonDown += track_MouseLeftButtonDown;
                 //track.MouseDown += track_MouseDown;                     
 
@@ -310,7 +328,7 @@ namespace GymnasticsVideoGallery
                         Msgbox("This file type is not supported.");
                     }
                 }
-                Debug.Print("Initialize end");
+                Log("Initialize end");
             }
             catch (Exception e) //settings.ini does not exist
             {
@@ -336,7 +354,7 @@ namespace GymnasticsVideoGallery
 
                             string[] arr = line.Split('=');
                             string[] arr2 = arr[0].Trim().Split(' ');
-                            //Debug.Print("---" + arr[0] + "---" + arr[1].Trim() + "---" + arr2[0] + "---" + arr2[1] + "---");
+                            //Log("---" + arr[0] + "---" + arr[1].Trim() + "---" + arr2[0] + "---" + arr2[1] + "---");
                             switch (arr2[0])
                             {
                                 case "bool":
@@ -370,7 +388,7 @@ namespace GymnasticsVideoGallery
         //saves all settings from the memory, not just the key and value.
         private void SaveSetting(string key, dynamic value) //ShowAllFilenames gets checked after window loading, or checkbox loading. Currently there is no way to prevent updating the settings, unless I use a timer.
         {
-            Debug.Print("savesetting " + key + " = " + ((object)value).ToString());
+            Log("savesetting " + key + " = " + ((object)value).ToString());
             settings[key] = value;
             SaveSettings();
             
@@ -442,7 +460,7 @@ namespace GymnasticsVideoGallery
                 SkillsList.ItemsSource = SkillsListSource; //when changing root directory, the current selection is removed, and fires the change event, but the selecteditem is null.
                 changedByProgramList = false;
 
-                Debug.Print("LoadDirList, SkillsList.SelectedItem ---" + SkillsList.SelectedItem + "--- settings[selectedskill] ---" + (string)settings["SelectedSkill"] + "---");
+                Log("LoadDirList, SkillsList.SelectedItem ---" + SkillsList.SelectedItem + "--- settings[selectedskill] ---" + (string)settings["SelectedSkill"] + "---");
                 if (settings["SelectedSkill"].Trim() != "")
                 { //check: if it exists.
                     SkillsList.SelectedItem = settings["SelectedSkill"];
@@ -507,10 +525,10 @@ namespace GymnasticsVideoGallery
             if (thumbsMouseEnabledThumb && thumbsMouseEnabledList)
             {
                 //if we are over an empty area, it does not register.
-                //Debug.Print("mousemove "+ contextItemIndex + " " + FileInfoGrid.Visibility.ToString());
+                //Log("mousemove "+ contextItemIndex + " " + FileInfoGrid.Visibility.ToString());
                 if (contextItemIndex == -1) //when the menu is open, no mousemove registers, but we need to prevent that we click the bottom of an image, the menu opens, we select show info, and the picture below will show its filename without moving the mouse.
                 {
-                    //Debug.Print("Thumbs_MouseMove sender: " + sender + ", e.Source: " + e.Source);
+                    //Log("Thumbs_MouseMove sender: " + sender + ", e.Source: " + e.Source);
                     var obj = (e.Source != null) ? e.Source : sender; //the latter case occurs, when we got here from the finish of UpdateThumbs.
                     //if (!(e.Source is Border)) //can be Image, or nothing when we activate the window.
                     if (obj is Image)
@@ -557,7 +575,7 @@ namespace GymnasticsVideoGallery
 
         private void ThumbScroll_GotFocus(object sender, RoutedEventArgs e)
         {
-            Debug.Print("ThumbScroll_GotFocus");
+            Log("ThumbScroll_GotFocus");
             if (Mouse.LeftButton == MouseButtonState.Pressed || Keyboard.IsKeyDown(Key.D1) || Keyboard.IsKeyDown(Key.D2) || Keyboard.IsKeyDown(Key.D3)
                  || Keyboard.IsKeyDown(Key.D4) || Keyboard.IsKeyDown(Key.D5) || Keyboard.IsKeyDown(Key.D6) || Keyboard.IsKeyDown(Key.D7) || Keyboard.IsKeyDown(Key.D8)
                   || Keyboard.IsKeyDown(Key.D9))
@@ -566,7 +584,7 @@ namespace GymnasticsVideoGallery
             }
             else if (Keyboard.IsKeyDown(Key.Tab)) //only tab is dealt with
             {
-                Debug.Print("ThumbScroll_GotFocus");
+                Log("ThumbScroll_GotFocus");
                 SelectFirstThumb();
             }
         }
@@ -600,17 +618,16 @@ namespace GymnasticsVideoGallery
 
         private void ThumbScroll_LostFocus(object sender, RoutedEventArgs e)
         {
-            Debug.Print("ThumbScroll_LostFocus cancelThumbLosingFocus: " + cancelThumbLosingFocus);
+            Log("ThumbScroll_LostFocus cancelThumbLosingFocus: " + cancelThumbLosingFocus);
             if (!cancelThumbLosingFocus)
             {
-                Debug.Print("ThumbScroll_LostFocus 2");
                 BorderRect.Visibility = Visibility.Hidden; //currentPicIndex remains.
             }            
         }
 
         private void ThumbScroll_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            //Debug.Print("scrollChanged " + BorderRect.Visibility);
+            //Log("scrollChanged " + BorderRect.Visibility);
 
             currentThumbIndex = -1; //to enforce refresh of the filename label. The mousemove event will be called now, hittest is not needed.
 
@@ -623,7 +640,7 @@ namespace GymnasticsVideoGallery
 
         private void ThumbScroll_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) //makes it possible to move the selection rectangle with the keys
         {
-            Debug.Print("ThumbScroll_PreviewMouseLeftButtonDown");
+            Log("ThumbScroll_PreviewMouseLeftButtonDown");
             if (windowActivatingTimer != null) //on window activation we do not change the selection.
             {
                 return;
@@ -647,7 +664,7 @@ namespace GymnasticsVideoGallery
 
         private void ThumbScroll_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) //not getting called.
         {
-            Debug.Print("ThumbScroll_MouseLeftButtonDown");
+            Log("ThumbScroll_MouseLeftButtonDown");
         }
 
         #endregion
@@ -675,7 +692,7 @@ namespace GymnasticsVideoGallery
         {
             try
             {
-                Debug.Print("StartUpdateThumbs " + updateThumbsDir + " " + (string)settings["SelectedSkill"] + " " + threadThumb);
+                Log("StartUpdateThumbs updateThumbsDir " + updateThumbsDir + " selectedSkill " + settings["SelectedSkill"] + " threadThumb " + threadThumb + " caller " + new StackFrame(1, true).GetMethod().Name);
                 if (threadThumb != null && threadThumb.IsAlive && updateThumbsDir != settings["SelectedSkill"]) //refresh is running. If a picture is being created, ffmpeg will finish it, it will not be aborted.
                 {
                     //threadAborted = true;
@@ -686,7 +703,7 @@ namespace GymnasticsVideoGallery
             }
             catch (Exception e)
             {
-                Debug.Print(e.Message + " " + e.StackTrace);
+                Log(e.Message + " " + e.StackTrace);
             }
         }
 
@@ -694,13 +711,13 @@ namespace GymnasticsVideoGallery
         {
             try
             {
-                //Debug.Print("UpdateThumbs dir path: " + (string)settings["SkillsPath"] + (string)settings["SelectedSkill"]);
-                //Debug.Print(((bool)System.IO.Directory.Exists(settings["SkillsPath"] + settings["SelectedSkill"])).ToString());
+                //Log("UpdateThumbs dir path: " + (string)settings["SkillsPath"] + (string)settings["SelectedSkill"]);
+                //Log(((bool)System.IO.Directory.Exists(settings["SkillsPath"] + settings["SelectedSkill"])).ToString());
                 if (!System.IO.Directory.Exists(settings["SkillsPath"] + settings["SelectedSkill"]))
                 {
                     return;
                 }
-                //Debug.Print("UpdateThumbs: skillpath: " + settings["SkillsPath"] + ", selectedskill: " + settings["SelectedSkill"]);
+                //Log("UpdateThumbs: skillpath: " + settings["SkillsPath"] + ", selectedskill: " + settings["SelectedSkill"]);
                 //var watchUpdate = Stopwatch.StartNew();
 
 
@@ -712,8 +729,8 @@ namespace GymnasticsVideoGallery
 
                 updateThumbsDir = settings["SelectedSkill"];
 
-                Debug.Print("UpdateThumbs dir path: " + (string)settings["SkillsPath"] + (string)settings["SelectedSkill"]);
-                Debug.Print("Exists: " + (bool)System.IO.Directory.Exists(settings["SkillsPath"] + settings["SelectedSkill"]));
+                Log("UpdateThumbs dir path: " + (string)settings["SkillsPath"] + (string)settings["SelectedSkill"]);
+                Log("Exists: " + (bool)System.IO.Directory.Exists(settings["SkillsPath"] + settings["SelectedSkill"]));
                 FileInfo[] files;
                 DirectoryInfo info = new DirectoryInfo(settings["SkillsPath"] + settings["SelectedSkill"]);
                 if (settings["SortBy"] == "Name")
@@ -739,10 +756,10 @@ namespace GymnasticsVideoGallery
                     }
                 }
 
-                //Debug.Print("selectedskill: " + settings["SelectedSkill"]);
+                //Log("selectedskill: " + settings["SelectedSkill"]);
                 string baseDir = (settings["SelectedSkill"] == ".") ? settings["SkillsPath"] : settings["SkillsPath"] + settings["SelectedSkill"] + @"\";
                 
-                //Debug.Print("UpdateThumbs, basedir " + baseDir); //contains double \ at the end, if selectedskill is nothing.
+                //Log("UpdateThumbs, basedir " + baseDir); //contains double \ at the end, if selectedskill is nothing.
 
                 //displayedThumbs = new List<string> { "a", "c", "d", "e" };
                 //contents = new string[] { "a", "b", "c", "e", "f" };
@@ -784,7 +801,7 @@ namespace GymnasticsVideoGallery
                             }
                         }
 
-                        Debug.Print("Removing elements currentPicIndex " + currentPicIndex + " i " + i);
+                        Log("Removing elements currentPicIndex " + currentPicIndex + " i " + i);
 
                         if (currentPicIndex != -1) //it is to position borderRect right, when files are removed from the current System.IO.Directory. Color does not change.
                         {
@@ -818,16 +835,16 @@ namespace GymnasticsVideoGallery
                     string targetFile = contents[i];
                     if (displayedThumbs.IndexOf(targetFile) == -1) //not yet exist
                     {
-                        //Debug.Print("Adding new thumb: " + targetFile);
+                        //Log("Adding new thumb: " + targetFile);
                         //if the orig file is newer than the thumb, we create new thumb.
                         FileInfo fileInfoThumb = new FileInfo(targetFile);
                         string origFile = ThumbToOrig(targetFile);
                         FileInfo fileInfoOrig = new FileInfo(origFile);
 
-                        //Debug.Print(fileInfoThumb.LastWriteTime + " " + fileInfoOrig.LastWriteTime);
+                        //Log(fileInfoThumb.LastWriteTime + " " + fileInfoOrig.LastWriteTime);
                         if (fileInfoOrig.LastWriteTime > fileInfoThumb.LastWriteTime && fileInfoThumb.LastWriteTime.ToString() != "01/01/1601 01.00.00")
                         {
-                            Debug.Print("orig file is newer, orig: " + fileInfoOrig.LastWriteTime + " thumb: " + fileInfoThumb.LastWriteTime);
+                            Log("orig file is newer, orig: " + fileInfoOrig.LastWriteTime + " thumb: " + fileInfoThumb.LastWriteTime);
                             if (File.Exists(targetFile))
                             {
                                 File.Delete(targetFile);
@@ -839,16 +856,16 @@ namespace GymnasticsVideoGallery
                             if (System.IO.Path.GetExtension(origFile).ToLower() == ".mp4")
                             {
                                 var watch = Stopwatch.StartNew();
-                                //Debug.Print("Getting media info" + targetFile + "---" + sourceFile);
+                                //Log("Getting media info" + targetFile + "---" + sourceFile);
                                 string[] arr = GetMediaInfo(origFile, "Video;%Duration%");
                                 double middle = int.Parse(arr[0]) / 2;
-                                //Debug.Print("Updatethumbs middle calculated: ");
+                                //Log("Updatethumbs middle calculated: ");
                                 watch.Stop();
                                 var elapsedMs = watch.ElapsedMilliseconds;
 
                                 watch.Restart();
                                 GetStillImage(origFile, middle, targetFile);
-                                //Debug.Print("Got image: ");
+                                //Log("Got image: ");
                                 watch.Stop();
                                 elapsedMs = watch.ElapsedMilliseconds;
                             }
@@ -862,7 +879,7 @@ namespace GymnasticsVideoGallery
                         {
                             CreateThumb(targetFile, i);
                         }
-                        //Debug.Print("Updatethumbs, adding thumbs, i " + i + " currentPicIndex " + currentPicIndex);
+                        //Log("Updatethumbs, adding thumbs, i " + i + " currentPicIndex " + currentPicIndex);
                         if (currentPicIndex != -1 && i <= currentPicIndex) //it is to position borderRect right, when files are added to the current System.IO.Directory. 
                         {
                             currentPicIndex++; // 0 1 (2) 3 4, add 2 3, currentPicIndex => 4 
@@ -881,7 +898,7 @@ namespace GymnasticsVideoGallery
                     
                     if (currentThumbIndex != -1) //if the mouse is currently over a picture.
                     {
-                        Debug.Print("Updatethumbs refreshes filename label currentThumbIndex " + currentThumbIndex);
+                        Log("Updatethumbs refreshes filename label currentThumbIndex " + currentThumbIndex);
                         int oldCurrentThubmIndex = currentThumbIndex;
                         currentThumbIndex = -1; //so the filename label appears correct under the mouse, if pictures were added outside program 
                         Thumbs_MouseMove(((Border)Thumbs.Children[oldCurrentThubmIndex]).Child, new System.Windows.Input.MouseEventArgs(Mouse.PrimaryDevice, 0));
@@ -907,13 +924,13 @@ namespace GymnasticsVideoGallery
             }
             catch (Exception e) //if the program was closed while a picture was being generated, or the thread was aborted.
             {
-                Debug.Print(e.Message + " " + e.StackTrace);//Exception thrown: 'System.FormatException' in mscorlib.dll
+                Log(e.Message + " " + e.StackTrace);//Exception thrown: 'System.FormatException' in mscorlib.dll
             }
         }
 
         private void CreateThumb(string src, int index)
         {
-            //Console.WriteLine("CreateThumb src " + src + " index " + index);
+            //Log("CreateThumb src " + src + " index " + index);
             this.Dispatcher.Invoke(() =>
             {
                 try
@@ -987,7 +1004,7 @@ namespace GymnasticsVideoGallery
                         g.Children.Add(cm);
                     }
 
-                    //Debug.Print("CreateThumb: index: " + index + ", displayedThumbs.Count: " + displayedThumbs.Count);                    
+                    //Log("CreateThumb: index: " + index + ", displayedThumbs.Count: " + displayedThumbs.Count);                    
 
                     displayedThumbs.Insert(index, src);
                     Thumbs.Children.Insert(index, b);
@@ -1002,7 +1019,7 @@ namespace GymnasticsVideoGallery
                 }
                 catch (Exception e) //if the program was closed while a picture was being generated, or the thread was aborted
                 {
-                    Debug.Print(e.Message + " " + e.StackTrace);
+                    Log(e.Message + " " + e.StackTrace);
                 }
             });
         }        
@@ -1010,14 +1027,14 @@ namespace GymnasticsVideoGallery
         private void Im_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             //we don't set selection here, because this is where dragging takes place.
-            Debug.Print("Im_MouseLeftButtonDown");
+            Log("Im_MouseLeftButtonDown");
             Image i = (Image)sender;
             imageDownFileName = new Uri(i.Source.ToString()).LocalPath;
         }
 
         private void Im_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
-            Debug.Print("Im_MouseLeftButtonUp");
+            Log("Im_MouseLeftButtonUp");
 
             if (noContentLoad) return;
             //if (windowActivatingTimer != null || (threadThumb != null && threadThumb.IsAlive)) return; //for cases where a file is renamed outside of program.
@@ -1027,7 +1044,7 @@ namespace GymnasticsVideoGallery
 
             if (index == -1) return; //renaming dir outside of program, and activating the window by clicking on a thumbnail. sender image is already removed.
 
-            //Debug.Print("Im_MouseLeftButtonUp " + selectedPicIndexes.Count + " " + currentPicIndex);
+            //Log("Im_MouseLeftButtonUp " + selectedPicIndexes.Count + " " + currentPicIndex);
             if (selectedPicIndexes.Count > 1 || selectedPicIndexes.Count == 1 && currentPicIndex != selectedPicIndexes[0] || Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) || Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
             {
                 //if multiple items are selected, we only unselect other items, we do not load video. 
@@ -1059,7 +1076,7 @@ namespace GymnasticsVideoGallery
                 //but it is deleted soon, and selection goes to next thumbnail.
                 //Also when adding / deleting files before the selected position.
                 //if we release the button fast enough, we can skip this phase, and content loads.
-                Debug.Print("Im_MouseMove imageDownFileName " + imageDownFileName + " imagesource " + new Uri(i.Source.ToString()).LocalPath);
+                Log("Im_MouseMove imageDownFileName " + imageDownFileName + " imagesource " + new Uri(i.Source.ToString()).LocalPath);
                 if (new Uri(i.Source.ToString()).LocalPath != imageDownFileName)
                 {
                     noContentLoad = true;
@@ -1090,7 +1107,7 @@ namespace GymnasticsVideoGallery
                 }
                 string[] files = GetFilesFromSelection().ToArray();
 
-                Debug.Print("DoDragDrop before, joined array " + String.Join(";", selectedPicIndexes));
+                Log("DoDragDrop before, joined array " + String.Join(";", selectedPicIndexes));
 
                 /*
                  Possible drag-drop situations:
@@ -1116,7 +1133,7 @@ namespace GymnasticsVideoGallery
                 DragDrop.DoDragDrop(i, new System.Windows.DataObject(System.Windows.DataFormats.FileDrop, files), System.Windows.DragDropEffects.Move | System.Windows.DragDropEffects.Copy);
                 //code here runs after drag ended                
 
-                Debug.Print("DoDragDrop after 1 currentPicIndex " + currentPicIndex + " BorderRect.Visibility " + BorderRect.Visibility + " joined array " + String.Join(";", selectedPicIndexes));
+                Log("DoDragDrop after 1 currentPicIndex " + currentPicIndex + " BorderRect.Visibility " + BorderRect.Visibility + " joined array " + String.Join(";", selectedPicIndexes));
                 
                 foreach(string origFile in files)
                 {
@@ -1125,7 +1142,7 @@ namespace GymnasticsVideoGallery
                         RemoveThumb(ThumbToOrig(origFile),false);
                     }
                 }
-                Debug.Print("DoDragDrop after 2 currentPicIndex " + currentPicIndex + " BorderRect.Visibility " + BorderRect.Visibility + " joined array " + String.Join(";", selectedPicIndexes));
+                Log("DoDragDrop after 2 currentPicIndex " + currentPicIndex + " BorderRect.Visibility " + BorderRect.Visibility + " joined array " + String.Join(";", selectedPicIndexes));
                 changedByProgramList = true;
                 SkillsList.SelectedItem = settings["SelectedSkill"]; //restore selection
                 changedByProgramList = false;
@@ -1136,13 +1153,13 @@ namespace GymnasticsVideoGallery
                 FileNameGrid.Visibility = Visibility.Hidden;//label would normally hide, when mouse leaves the thumbnail area, but it doesn't register during drag & drop.
                 CommentGrid.Visibility = Visibility.Hidden;
                 MainWindow1.AllowDrop = true;
-                Debug.Print("DoDragDrop after 3");
+                Log("DoDragDrop after 3");
             }
         }
 
         private void PositionLabel(int thumbIndex, string imgSrc) //runs when the mouse moves over the thumbnails; when we scroll the window with the mouse wheel; when pictures are being updated (incl. when we press Esc); when we switch to this window.
         {
-            //Debug.Print("PositionLabel, thumbindex " + thumbIndex + " currentthumbindex " + currentThumbIndex);
+            //Log("PositionLabel, thumbindex " + thumbIndex + " currentthumbindex " + currentThumbIndex);
             if (currentThumbIndex != thumbIndex)
             {
                 if ((bool)ShowAllFilenames.IsChecked) //hide filename and make background transparent. We need to keep only the rename field.
@@ -1218,7 +1235,7 @@ namespace GymnasticsVideoGallery
 
             foreach (int index in selectedPicIndexes)
             {
-                Debug.Print("DrawMultiSelection index: " + index + " count: " + FileNameGridAllCanvas.Children.Count);
+                Log("DrawMultiSelection index: " + index + " count: " + FileNameGridAllCanvas.Children.Count);
                 ((Grid)FileNameGridAllCanvas.Children[index]).Children[1].Visibility = Visibility.Visible;
             }
         }
@@ -1227,7 +1244,7 @@ namespace GymnasticsVideoGallery
         
             //set by the arrows, numbers, or mouse click
         {
-            Debug.Print("SelectMultiple " + newIndex);
+            Log("SelectMultiple " + newIndex);
             if ((Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)) && !isVideoFullscreen && !isPictureFullscreen) //add new
             {
                 //remove selection from current item, when using the arrows with the control, and the new item is selected.
@@ -1376,7 +1393,7 @@ namespace GymnasticsVideoGallery
                 //lThumb.Add(fileName);
                 lOrig.Add(origFile);
             }
-            Debug.Print("GetFilesFromSelection " + String.Join(";",lOrig.ToArray()));
+            Log("GetFilesFromSelection " + String.Join(";",lOrig.ToArray()));
             return lOrig;
             //return new Array[] { lThumb.ToArray(), lOrig.ToArray()};
         }
@@ -1437,7 +1454,7 @@ namespace GymnasticsVideoGallery
         {
             try
             {
-                Debug.Print("Context_ShowInfo");
+                Log("Context_ShowInfo");
                 int index = (contextItemIndex != -1) ? contextItemIndex : currentPicIndex;
                 string baseDir, fileName;
                 Image im = null;
@@ -1518,7 +1535,7 @@ namespace GymnasticsVideoGallery
                     {
                         fileName = ThumbToOrig(fileName);
                     }
-                    Console.WriteLine("Showinfo: " + fileName);
+                    Log("Showinfo: " + fileName);
 
                     t += "Picture\n";
                     t += fileName + "\n";
@@ -1530,7 +1547,7 @@ namespace GymnasticsVideoGallery
                     double lengthMB = length / 1024 / 1024;
                     t += "File size: " + lengthMB.ToString("0.#", CultureInfo.InvariantCulture) + " MB\n";
 
-                    CW("Showinfo 1: " + stw.ElapsedMilliseconds);
+                    Log("Showinfo 1: " + stw.ElapsedMilliseconds);
 
 
                     // Instantiate the reader
@@ -1581,7 +1598,7 @@ namespace GymnasticsVideoGallery
                                     t2 += $"{tag.Name}: {tag.Description}\n";
                                     break;
                             }
-                            //Console.WriteLine($"{directory.Name} - {tag.Name} = {tag.Description}");
+                            //Log($"{directory.Name} - {tag.Name} = {tag.Description}");
                         }
                     }
                     t += "Resolution: " + resX + " x " + resY + "\n\n" + t2;
@@ -1598,7 +1615,7 @@ namespace GymnasticsVideoGallery
                         t += item.Id.ToString("x") + ": " + valueStr + "\n";
                     }*/
 
-                    CW("Showinfo 2: " + stw.ElapsedMilliseconds);
+                    Log("Showinfo 2: " + stw.ElapsedMilliseconds);
                     stw.Stop();
                 }
                 FileInfoText.Text = t;
@@ -1606,7 +1623,7 @@ namespace GymnasticsVideoGallery
                 PositionBorderRect(index, true);
                 BorderRect.Visibility = Visibility.Visible;
                 infoContextItemIndex = index; //used for scrolling, contextItemIndex is reset as the right-click menu closes.
-                Console.WriteLine("ShowInfo infoContextItemIndex: " + infoContextItemIndex);
+                Log("ShowInfo infoContextItemIndex: " + infoContextItemIndex);
             }
             catch (Exception ex)
             {
@@ -1652,7 +1669,7 @@ namespace GymnasticsVideoGallery
             
             //handle clicking away events, like clicking on a video, and mouseover event too.
             renameContextItemIndex = (contextItemIndex != -1) ? contextItemIndex : currentPicIndex;
-            Debug.Print(" Rename_Click index " + renameContextItemIndex);
+            Log(" Rename_Click index " + renameContextItemIndex);
             Border b = (Border)Thumbs.Children[renameContextItemIndex];
             Image im = (Image)b.Child;
             PositionLabel(renameContextItemIndex, im.Source.ToString()); //when pressing key to rename image, the mouse might be over another image
@@ -1667,7 +1684,7 @@ namespace GymnasticsVideoGallery
             FileRenameText.Focus();
             cancelThumbLosingFocus = false;
             CommentGrid.Visibility = Visibility.Hidden;
-            Debug.Print("Rename_Click FileRenameText.Visibility " + FileRenameText.Visibility + " FileNameGrid.Visibility " + FileNameGrid.Visibility);
+            Log("Rename_Click FileRenameText.Visibility " + FileRenameText.Visibility + " FileNameGrid.Visibility " + FileNameGrid.Visibility);
         }
 
         private void RestoreThumb_Click(object sender, RoutedEventArgs e)
@@ -1690,7 +1707,7 @@ namespace GymnasticsVideoGallery
 
         private void Context_Delete(object sender, RoutedEventArgs e, bool isNext)
         {
-            Debug.Print("Context_Delete "  + isNext + " " + currentPicIndex);
+            Log("Context_Delete "  + isNext + " " + currentPicIndex);
             try
             {
                 string fileName, type;
@@ -1724,7 +1741,7 @@ namespace GymnasticsVideoGallery
 
                 if (confirmResult == MessageBoxResult.Yes)
                 {
-                    Debug.Print("Context_Delete before delete currentPicIndex " + currentPicIndex);
+                    Log("Context_Delete before delete currentPicIndex " + currentPicIndex);
                     if (isPictureFullscreen)
                     {
                         if (currentPicIndexExt == -1)
@@ -1741,12 +1758,12 @@ namespace GymnasticsVideoGallery
                     }
                     else if (isVideoFullscreen)
                     {
-                        Debug.Print("Context_Delete before delete2 currentPicIndex " + currentPicIndex);
+                        Log("Context_Delete before delete2 currentPicIndex " + currentPicIndex);
                         StopVideo();
                         MediaElement1.Source = null;
                         Dispatcher.Invoke(new Action(() => { }), DispatcherPriority.ContextIdle);
 
-                        Debug.Print("Context_Delete before delete3 currentPicIndex " + currentPicIndex + " " + currentPicIndexExt);
+                        Log("Context_Delete before delete3 currentPicIndex " + currentPicIndex + " " + currentPicIndexExt);
                         if (currentPicIndexExt == -1)
                         {
                             RemoveThumb(OrigToThumb(fileName),true);
@@ -1861,7 +1878,7 @@ namespace GymnasticsVideoGallery
             }
             catch (Exception e)
             {
-                Debug.Print(e.Message + " " + e.StackTrace);
+                Log(e.Message + " " + e.StackTrace);
                 return null;
             }
         }
@@ -1880,13 +1897,13 @@ namespace GymnasticsVideoGallery
                     Arguments = "-y -ss " + (seektime / 1000).ToString(CultureInfo.InvariantCulture) + " -i \"" + vname + "\" -qscale:v 2 -vframes 1 \"" + outpath + "\""
                 };
                 process.StartInfo = startInfo;
-                Debug.Print(process.StartInfo.Arguments);
+                Log(process.StartInfo.Arguments);
                 process.Start();
                 process.WaitForExit(); //if the skillslist selection is changed, and the thread is aborted, it will throw an exception.
             }
             catch (Exception e)
             {
-                Debug.Print(e.Message + " " + e.StackTrace);
+                Log(e.Message + " " + e.StackTrace);
             }
         }
 
@@ -1910,7 +1927,7 @@ namespace GymnasticsVideoGallery
             }
             catch (Exception ex)
             {
-                Debug.Print(ex.Message + " " + ex.StackTrace);
+                Log(ex.Message + " " + ex.StackTrace);
             }            
         }
 
@@ -1984,7 +2001,7 @@ namespace GymnasticsVideoGallery
                 double timeStamp = Math.Round(double.Parse(arr[1], CultureInfo.InvariantCulture) * 1000, 3); // without rounding, we get unequal values at GetMiddleIndexPos, even if the numbers look perfectly the same when written as a string.
 
                 extFrameIndex.Add(timeStamp);
-                Debug.Print(extFrameIndex.Count.ToString());
+                Log(extFrameIndex.Count.ToString());
                 if (arr[2] == "I")
                 {
                     extKeyFrames.Add(timeStamp);
@@ -2039,7 +2056,7 @@ namespace GymnasticsVideoGallery
             }
             else
             {
-                Debug.Print("Writing index to file extFrameIndex.Count: " + extFrameIndex.Count); //1410
+                Log("Writing index to file extFrameIndex.Count: " + extFrameIndex.Count); //1410
                 File.WriteAllText(OrigToIndex(extVideoSource), extractFramesOutput);
 
                 if (extVideoSource == videoSource && isVideoFullscreen)
@@ -2080,17 +2097,17 @@ namespace GymnasticsVideoGallery
         {
             try
             {
-                //Debug.Print("FileRenameText_KeyDown " + renameContextItemIndex);
-                //Debug.Print(displayedThumbs[renameContextItemIndex]);
+                //Log("FileRenameText_KeyDown " + renameContextItemIndex);
+                //Log(displayedThumbs[renameContextItemIndex]);
                 if (e.Key == Key.Enter)
                 {
                     string origFile = ThumbToOrig(displayedThumbs[renameContextItemIndex]);
                     string baseDir = (settings["SelectedSkill"] == ".") ? settings["SkillsPath"] : settings["SkillsPath"] + settings["SelectedSkill"] + @"\";
                     string newFile = baseDir + FileRenameText.Text;
-                    Console.WriteLine("FileRenameText_KeyDown renameContextItemIndex " + renameContextItemIndex + " thumb " + displayedThumbs[renameContextItemIndex] + " origFile " + origFile + " newFile " + newFile);
+                    Log("FileRenameText_KeyDown renameContextItemIndex " + renameContextItemIndex + " thumb " + displayedThumbs[renameContextItemIndex] + " origFile " + origFile + " newFile " + newFile);
                     if (origFile != newFile) //name changed
                     {
-                        //Debug.Print("FileRenameText_KeyDown " + System.IO.Path.GetExtension(newFile) + " " + System.IO.Path.GetExtension(origFile));
+                        //Log("FileRenameText_KeyDown " + System.IO.Path.GetExtension(newFile) + " " + System.IO.Path.GetExtension(origFile));
                         if (System.IO.Path.GetExtension(newFile).ToLower() != System.IO.Path.GetExtension(origFile).ToLower())
                         {
                             Msgbox("Changing extension is not supported.");
@@ -2197,7 +2214,7 @@ namespace GymnasticsVideoGallery
                         {
                             if (System.IO.Path.GetExtension(origFile).ToLower() == ".jpg" || System.IO.Path.GetExtension(origFile).ToLower() == ".png") //picture
                             {
-                                Console.WriteLine("Moving file " + origFile + " to " + newFile);
+                                Log("Moving file " + origFile + " to " + newFile);
                                 File.Move(origFile, newFile);
                                 File.Move(OrigToThumb(origFile), OrigToThumb(newFile));
 
@@ -2213,11 +2230,11 @@ namespace GymnasticsVideoGallery
                                 displayedThumbs[renameContextItemIndex] = OrigToThumb(newFile);
                                 ((TextBlock)((Grid)((Grid)FileNameGridAllCanvas.Children[renameContextItemIndex]).Children[0]).Children[0]).Text =
                                         System.IO.Path.GetFileName(newFile).Replace(settings["SelectedSkill"] + settings["FileNameSeparator"], "");
-                                Console.WriteLine("Moving file end");
+                                Log("Moving file end");
                             }
                             else //video
                             {
-                                //Debug.Print("renaming " + origFile + " to " + newFile);
+                                //Log("renaming " + origFile + " to " + newFile);
                                 File.Move(origFile, newFile);
                                 //thumbnail must not exist, unless the user copied it into the folder, or remained from a previous root setting.
                                 File.Move(OrigToThumb(origFile), OrigToThumb(newFile));
@@ -2290,7 +2307,7 @@ namespace GymnasticsVideoGallery
 
         private void CloseRenameField(bool updateText)
         {
-            Console.WriteLine("CloseRenameField");
+            Log("CloseRenameField");
             if (updateText)
             {
                 FileNameLabelText.Text = FileRenameText.Text;
@@ -2302,7 +2319,7 @@ namespace GymnasticsVideoGallery
             //hide only if the mouse is not over the image that was renamed
             HitTestResult result = VisualTreeHelper.HitTest(ThumbScroll,Mouse.GetPosition(ThumbScroll));
 
-            Debug.Print("CloseRenameField " + result.VisualHit);
+            Log("CloseRenameField " + result.VisualHit);
             if (result.VisualHit is Image)
             {
                 int index = Thumbs.Children.IndexOf((Border)((Image)result.VisualHit).Parent);
@@ -2323,15 +2340,15 @@ namespace GymnasticsVideoGallery
 
         private int RemoveThumb(string thumbName, bool isNext) //origtothumb must be used on filenames, before passing them to this function.
         {
-            Debug.Print("RemoveThumb fileName " + thumbName + " currentPicIndex " + currentPicIndex);
+            Log("RemoveThumb fileName " + thumbName + " currentPicIndex " + currentPicIndex);
             for (int i = 0; i < Thumbs.Children.Count; i++) //takes 160/10000 ms to cycle through 39 elements
             {
                 Image im = (Image)((Border)Thumbs.Children[i]).Child;
                 BitmapImage bit = (BitmapImage)im.Source;
-                //Debug.Print(ThumbToOrig(bit.UriSource.LocalPath));
+                //Log(ThumbToOrig(bit.UriSource.LocalPath));
                 if (bit.UriSource.LocalPath == thumbName)
                 {
-                    Debug.Print("RemoveThumb before " + String.Join(";", selectedPicIndexes));
+                    Log("RemoveThumb before " + String.Join(";", selectedPicIndexes));
                     Thumbs.Children.RemoveAt(i);
                     displayedThumbs.RemoveAt(i);
                     FileNameGridAllCanvas.Children.RemoveAt(i);
@@ -2349,7 +2366,7 @@ namespace GymnasticsVideoGallery
 
                     if (currentPicIndex != -1) //if cursor is set
                     {
-                        Debug.Print("removethumb, cursor set " + i + " " + currentPicIndex);
+                        Log("removethumb, cursor set " + i + " " + currentPicIndex);
                         if (i < currentPicIndex) //thumbnail view, cursor is at a greater position than the removed element
                         {
                             currentPicIndex--;
@@ -2361,7 +2378,7 @@ namespace GymnasticsVideoGallery
                             {
                                 if ((currentPicIndex < Thumbs.Children.Count) && isNext) //selection rectangle goes to the next element
                                 {
-                                    Debug.Print("goes to next element");
+                                    Log("goes to next element");
                                     //if there is at least one remaining selected item, the item at the cursor will not be selected (if it is not that item).
                                     //Otherwise select it.
                                     if (selectedPicIndexes.Count > 0)
@@ -2384,14 +2401,14 @@ namespace GymnasticsVideoGallery
                                 }
                                 else //last element was deleted, rectangle has to disappear.
                                 {
-                                    Debug.Print("hiding rect");
+                                    Log("hiding rect");
                                     BorderRect.Visibility = Visibility.Hidden;
                                     currentPicIndex = -1;                                    
                                 }
                             }
                         }
                     }
-                    Debug.Print("RemoveThumb after " + String.Join(";", selectedPicIndexes));
+                    Log("RemoveThumb after " + String.Join(";", selectedPicIndexes));
                     return i;
                 }
             }
@@ -2452,7 +2469,7 @@ namespace GymnasticsVideoGallery
                     VideoMenuItemExtract.Header = "Show frames";
                     VideoMenuItemExtract2.Header = "Show frames";
                 }
-                Debug.Print("MediaElement1_ContextMenuOpening setting videoControlGridIsVisible");
+                Log("MediaElement1_ContextMenuOpening setting videoControlGridIsVisible");
                 //when opening the contextmenu of a marker, this function gets called too! setting videoControlGridIsVisible to true.
                 videoControlGridIsVisible = VideoControlGrid.Visibility == Visibility.Visible ? true : false; //used so the controls do not autohide on setting marker (because that menuitem is high up)
             }
@@ -2510,7 +2527,7 @@ namespace GymnasticsVideoGallery
                         CloseCommentPos();
                     }
 
-                    Debug.Print("Markposition_Click" + videoControlGridIsVisible);
+                    Log("Markposition_Click" + videoControlGridIsVisible);
                     if (videoControlGridIsVisible)
                     {
                         videoControlGridIsVisible = false; //reset variable, currentCommentPosIndex will be used to keep the controls visible
@@ -2520,7 +2537,7 @@ namespace GymnasticsVideoGallery
                     {
                         currentCommentPosIndex = -1;
                     }
-                    Debug.Print("MarkPosition_Click2 " + videoControlGridIsVisible + " " + currentCommentPosIndex);
+                    Log("MarkPosition_Click2 " + videoControlGridIsVisible + " " + currentCommentPosIndex);
                 }
                 else
                 {
@@ -2595,7 +2612,7 @@ namespace GymnasticsVideoGallery
             }
             catch (Exception ex)
             {
-                Debug.Print(ex.Message + " " + ex.StackTrace);
+                Log(ex.Message + " " + ex.StackTrace);
             }
         }
 
@@ -2607,7 +2624,7 @@ namespace GymnasticsVideoGallery
         
         private void CommentTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
-            Debug.Print("CommentTextBox_KeyDown currentCommentPosIndex: " + currentCommentPosIndex + " key: " + e.Key);
+            Log("CommentTextBox_KeyDown currentCommentPosIndex: " + currentCommentPosIndex + " key: " + e.Key);
             if (tbOpening)
             {
                 tbOpening = false;
@@ -2703,7 +2720,7 @@ namespace GymnasticsVideoGallery
         private void CommentMarker_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             currentCommentPosIndex = CommentCanvas.Children.IndexOf((Canvas)((Image)sender).Parent);
-            Debug.Print("CommentMarker_MouseLeftButtonDown currentCommentPosIndex " + currentCommentPosIndex);
+            Log("CommentMarker_MouseLeftButtonDown currentCommentPosIndex " + currentCommentPosIndex);
 
             if (e.ClickCount == 1)
             {
@@ -2722,7 +2739,7 @@ namespace GymnasticsVideoGallery
 
         private void CommentMarkerMenuRemove_Click(object sender, RoutedEventArgs e)
         {
-            Debug.Print("CommentMarkerMenuRemove_Click, videoControlGridIsVisible " + videoControlGridIsVisible);
+            Log("CommentMarkerMenuRemove_Click, videoControlGridIsVisible " + videoControlGridIsVisible);
             CommentCanvas.Children.RemoveAt(currentCommentPosIndex);
             RemoveCommentPos(commentPositions[currentCommentPosIndex]); //removes from file
             commentPositions.RemoveAt(currentCommentPosIndex);
@@ -2771,7 +2788,7 @@ namespace GymnasticsVideoGallery
 
         public void CloseCommentPos() //does not reset currentCommentPosIndex.
         {
-            //Debug.Print("CloseCommentPos");
+            //Log("CloseCommentPos");
             System.Windows.Controls.TextBox tb = ((System.Windows.Controls.TextBox)(CommentCanvas.Children[currentCommentPosIndex] as Canvas).Children[1]);
             SaveCommentPos(tb);
             if (!settings["CommentsLocked"])
@@ -2782,7 +2799,7 @@ namespace GymnasticsVideoGallery
 
         private void CommentMarker_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
-            Debug.Print("CommentMarker_ContextMenuOpening, videoControlGridIsVisible " + videoControlGridIsVisible);
+            Log("CommentMarker_ContextMenuOpening, videoControlGridIsVisible " + videoControlGridIsVisible);
             currentCommentPosIndex = CommentCanvas.Children.IndexOf((Canvas)((Image)sender).Parent);
             ((System.Windows.Controls.MenuItem)((Image)sender).ContextMenu.Items[1]).Header = commentPositionComments[currentCommentPosIndex] == "" ? "Add comment" : "Edit comment";
         }
@@ -2833,7 +2850,7 @@ namespace GymnasticsVideoGallery
 
         private void MainWindow1_Activated(object sender, EventArgs e) //runs on startup too instead of skillslist_selectionchanged.
         {
-            //Debug.Print("MainWindow1_Activated");
+            //Log("MainWindow1_Activated");
             if (!dialogActivation && System.IO.Directory.Exists(settings["SkillsPath"])) // if we are not coming from a msgbox, or are at the default page.
             {
                 //refresh directory list
@@ -2849,7 +2866,7 @@ namespace GymnasticsVideoGallery
                 SkillsListSource_new.Sort();
                 if (String.Join(";", SkillsListSource_new) != String.Join(";", SkillsListSource))
                 {
-                    Debug.Print("Lists are not equal");
+                    Log("Lists are not equal");
                     SkillsListSource = new List<string>(SkillsListSource_new); //passing list by value, not reference
                     changedByProgramList = true;
                     SkillsList.ItemsSource = null;
@@ -2881,15 +2898,21 @@ namespace GymnasticsVideoGallery
                 }
 
                 //windowActivating = Stopwatch.StartNew();
-                windowActivatingTimer = new DispatcherTimer();
-                windowActivatingTimer.Interval = TimeSpan.FromMilliseconds(100);
-                windowActivatingTimer.Tick += WindowActivatingTimer_Tick;
-                windowActivatingTimer.Start();
+
+                if (currentPicIndexExt == -1) //don't load thumbnails when opening external file, it slows down program
+                {
+                    windowActivatingTimer = new DispatcherTimer();
+                    windowActivatingTimer.Interval = TimeSpan.FromMilliseconds(100);
+                    windowActivatingTimer.Tick += WindowActivatingTimer_Tick;
+                    windowActivatingTimer.Start();
+                }
             }           
         }
 
         private void WindowActivatingTimer_Tick(object sender, EventArgs e)
         {
+            Log("WindowActivatingTimer_Tick");
+            
             //error: windowActivatingTimer is null, when switching away from window while it is loading. 
             if (windowActivatingTimer != null)
             {
@@ -2902,7 +2925,7 @@ namespace GymnasticsVideoGallery
         private void MainWindow1_Loaded(object sender, RoutedEventArgs e) //to prevent updating the settings, modifying the file's date.
         {
             changedByProgramInit = false;
-            Debug.Print("MainWindow1_Loaded");
+            Log("MainWindow1_Loaded");
             if (System.IO.Directory.Exists(settings["SkillsPath"]))
             {
                 FocusListItem();
@@ -2982,7 +3005,7 @@ namespace GymnasticsVideoGallery
             /*if (windowActivating != null)
             {
                 windowActivating.Stop();
-                //Debug.Print("MainWindow1_PreviewMouseDown" + windowActivating.ElapsedMilliseconds);
+                //Log("MainWindow1_PreviewMouseDown" + windowActivating.ElapsedMilliseconds);
                 //prevent mouse click from having action, while we just want to activate the window.
                 //problem: when we open the frames, we need to click twice to open a video (in thumbnail view), or to change slider position in video view.               
                 if (windowActivating.ElapsedMilliseconds < 20) // 4-9 ms
@@ -2999,7 +3022,7 @@ namespace GymnasticsVideoGallery
             noContentLoad = false; //new click, content may load.
             if (!thumbsMouseEnabledThumb) //rename text box is open, if we clicked outside the box, it should close.
             {
-                //Debug.Print("MainWindow1_PreviewMouseDown " + e.Source);
+                //Log("MainWindow1_PreviewMouseDown " + e.Source);
                 if (!(e.Source is System.Windows.Controls.TextBox))
                 {
                     CloseRenameField(false);
@@ -3028,7 +3051,7 @@ namespace GymnasticsVideoGallery
 
             if (isVideoFullscreen)
             {
-                Debug.Print("MainWindow1_PreviewMouseDown isVideoFullscreen e.Source: " + e.Source);
+                Log("MainWindow1_PreviewMouseDown isVideoFullscreen e.Source: " + e.Source);
                 if (e.Source is System.Windows.Controls.TextBox) //we clicked into a selected or not selected comment. currentCommentPosIndex may be -1 or already set.
                 {
                     //getting index, and reference to the textbox
@@ -3099,7 +3122,7 @@ namespace GymnasticsVideoGallery
         {
             if (isPictureFullscreen && !movingImage)
             {
-                Debug.Print("MainWindow1_PreviewMouseUp" + e.Source);
+                Log("MainWindow1_PreviewMouseUp" + e.Source);
                 if ((e.Source is Image && ((Image)e.Source).Name == "ImageElement1") || e.Source == this) //to avoid controlgrid clicks.
                 //Source will be MainWindow, if the picture doesn't fill the whole screen.
                 {
@@ -3117,7 +3140,7 @@ namespace GymnasticsVideoGallery
 
         private void PrevContent()
         {
-            Debug.Print("Prevcontent currentPicIndex: " + currentPicIndex);
+            Log("Prevcontent currentPicIndex: " + currentPicIndex);
             if (currentPicIndexExt != -1) //external file
             {
                 if (currentPicIndexExt > 0)
@@ -3175,7 +3198,7 @@ namespace GymnasticsVideoGallery
 
         private void NextContent(bool increaseIndex)
         {
-            Debug.Print("NextContent increaseIndex " + increaseIndex + " currentPicIndex " + currentPicIndex + " currentPicIndexExt " + currentPicIndexExt);
+            Log("NextContent increaseIndex " + increaseIndex + " currentPicIndex " + currentPicIndex + " currentPicIndexExt " + currentPicIndexExt);
 
             if (currentPicIndexExt != -1) //external file
             {
@@ -3212,30 +3235,30 @@ namespace GymnasticsVideoGallery
                 int limit = increaseIndex ? Thumbs.Children.Count - 1 : Thumbs.Children.Count;
                 int newIndex = increaseIndex ? currentPicIndex + 1 : currentPicIndex;
 
-                Debug.Print("Nextcontent limit: " + limit + " newIndex: " + newIndex + " Thumbs count: " + Thumbs.Children.Count);
+                Log("Nextcontent limit: " + limit + " newIndex: " + newIndex + " Thumbs count: " + Thumbs.Children.Count);
 
                 if (currentPicIndex < limit)
                 {                    
                     if (selectedPicIndexes.Count <= 1) //select new item, remove selection from old. 
                     {
                         selectedPicIndexes.Clear();
-                        Debug.Print("nextContent selecting mulitple newIndex " + newIndex);
+                        Log("nextContent selecting mulitple newIndex " + newIndex);
                         SelectMultiple(newIndex);
-                        Debug.Print(String.Join(";", selectedPicIndexes));
+                        Log(String.Join(";", selectedPicIndexes));
                     }
                     currentPicIndex = newIndex;
                     if (isVideoFullscreen)
                     {
-                        Debug.Print("Nextcontent exiting video");
+                        Log("Nextcontent exiting video");
                         ExitVideo();
                     }
                     if (isPictureFullscreen)
                     {
                         ExitPicture();
                     }
-                    Debug.Print("NextContent loading content " + currentPicIndex);
+                    Log("NextContent loading content " + currentPicIndex);
                     LoadContent(((Border)Thumbs.Children[currentPicIndex]).Child, new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, DateTime.Now.Millisecond));
-                    Debug.Print("NextContent content loaded " + currentPicIndex);
+                    Log("NextContent content loaded " + currentPicIndex);
                 }
                 else //exit video/picture view
                 {
@@ -3267,10 +3290,10 @@ namespace GymnasticsVideoGallery
         {
             if (videoLoaded)
             {
-                //Debug.Print("MainWindow1_MouseMove " + stw.ElapsedMilliseconds);
+                //Log("MainWindow1_MouseMove " + stw.ElapsedMilliseconds);
                 if (enteringFullscreen && stw.ElapsedMilliseconds > 500) //stw started at media opening. Mousemove is called automatically a few ms after, but we will only show the cursor, if a certain time elapsed, to avoid accidental mouse movements. This will be the first time we move the mouse and make the cursor visible.
                 {
-                    //Debug.Print("MainWindow1_MouseMove 2, enteringFullscreen: " + enteringFullscreen + " " + stw.ElapsedMilliseconds);
+                    //Log("MainWindow1_MouseMove 2, enteringFullscreen: " + enteringFullscreen + " " + stw.ElapsedMilliseconds);
                     enteringFullscreen = false;
                     this.Cursor = System.Windows.Input.Cursors.Arrow;
                     /*if (!isCursorVisible)
@@ -3282,7 +3305,7 @@ namespace GymnasticsVideoGallery
                 }
                 else if (!enteringFullscreen && !videoContextOpen) //if the context menu opens, stw is stopped and reset, and it will remain like that until the first mouse move after closing the menu.
                 {
-                    //Debug.Print("MainWindow1_MouseMove 2, stw.isRunning: " + stw.IsRunning);
+                    //Log("MainWindow1_MouseMove 2, stw.isRunning: " + stw.IsRunning);
                     if (stw.IsRunning == true) //cursor is still visible
                     {
                         stw.Reset(); //reset the stopwatch, so a new timeout period can start.
@@ -3336,17 +3359,17 @@ namespace GymnasticsVideoGallery
                     UpdateCutRect(false, false);
                 }
             }
-            //Debug.Print("MainWindow1_MouseMove " + System.Windows.Forms.Cursor.Position.Y.ToString() + " " + !(bool)settings["SliderIsLocked"] + " " + !userIsDraggingSlider + " " + !StartMarkerPressed + " " + !EndMarkerPressed + " " + currentCommentPosIndex + " " + !videoControlGridIsVisible);
+            //Log("MainWindow1_MouseMove " + System.Windows.Forms.Cursor.Position.Y.ToString() + " " + !(bool)settings["SliderIsLocked"] + " " + !userIsDraggingSlider + " " + !StartMarkerPressed + " " + !EndMarkerPressed + " " + currentCommentPosIndex + " " + !videoControlGridIsVisible);
             //&& currentCommentPosIndex == -1  was taken out. Instead, we make controlgrid always visible only, if a comment text box is open
             var element = FocusManager.GetFocusedElement(this);
             if (!settings["SliderIsLocked"] && !userIsDraggingSlider && !(element is System.Windows.Controls.TextBox && ((System.Windows.Controls.TextBox)element).IsReadOnly == false) && !StartMarkerPressed && !EndMarkerPressed && !videoControlGridIsVisible && Mouse.PrimaryDevice.LeftButton != MouseButtonState.Pressed)//the moment we lock the slider, it is visible, so it will not change.
             {
-                //Debug.Print("MainWindow1_MouseMove hiding controls? " + System.Windows.Forms.Cursor.Position.Y.ToString());
+                //Log("MainWindow1_MouseMove hiding controls? " + System.Windows.Forms.Cursor.Position.Y.ToString());
                 if (System.Windows.Forms.Cursor.Position.Y < MainGrid.ActualHeight - 100)
                 {
                     if (videoLoaded)
                     {
-                        //Debug.Print("MainWindow1_MouseMove hiding controls " + System.Windows.Forms.Cursor.Position.Y.ToString());
+                        //Log("MainWindow1_MouseMove hiding controls " + System.Windows.Forms.Cursor.Position.Y.ToString());
                         VideoControlGrid.Visibility = Visibility.Hidden;
                     }
                     else if (isPictureFullscreen)
@@ -3387,7 +3410,7 @@ namespace GymnasticsVideoGallery
         public void MainWindow1_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             //When Ctrl+Right is pressed, this function is called 3 times: LeftCtrl, RIghtAlt, Right.
-            //Debug.Print("MainWindow1_PreviewKeyDown, source: " + e.Source + ", key: " + e.Key + " thumbsMouseEnabledThumb " + thumbsMouseEnabledThumb + " thumbsMouseEnabledList " + thumbsMouseEnabledList);
+            //Log("MainWindow1_PreviewKeyDown, source: " + e.Source + ", key: " + e.Key + " thumbsMouseEnabledThumb " + thumbsMouseEnabledThumb + " thumbsMouseEnabledList " + thumbsMouseEnabledList);
 
             //no extra action, like "O" should happen at renaming a file. Also when editing comments, except when pressing right alt to switch comment.
             if (settingsPageOpen)
@@ -3457,7 +3480,7 @@ namespace GymnasticsVideoGallery
                     break;
 
                 case Key.Escape:
-                    Debug.Print("Key.Escape currentCommentPosIndex " + currentCommentPosIndex);
+                    Log("Key.Escape currentCommentPosIndex " + currentCommentPosIndex);
                     if (FileInfoGrid.Visibility == Visibility.Visible) //the click should only close the info box
                     {
                         HideInfo();
@@ -3589,7 +3612,7 @@ namespace GymnasticsVideoGallery
                     break;
 
                 case Key.Left:
-                    Debug.Print("Key.Left " + currentPicIndex + " " + settingsPageOpen);
+                    Log("Key.Left " + currentPicIndex + " " + settingsPageOpen);
 
                     if (isVideoFullscreen) //when several modified keys are pressed, conditions will run according to their order.
                     {
@@ -3766,7 +3789,7 @@ namespace GymnasticsVideoGallery
                                         middleIndexPos = (currentFrameIndexPos + secondcurrentFrameIndexPos) / 2;
                                         MediaElement1.Position = TimeSpan.FromMilliseconds(middleIndexPos);
                                         TimelineSlider.Value = middleIndexPos;
-                                        //Debug.Print("Key.Right " + currentFrameIndexPos + " " + secondcurrentFrameIndexPos + " " + middleIndexPos);
+                                        //Log("Key.Right " + currentFrameIndexPos + " " + secondcurrentFrameIndexPos + " " + middleIndexPos);
                                     }
                                     else if (currentFrameIndex == frameIndex.Count - 1) //last frame, we use the length of the video as second frame value
                                     {
@@ -3896,7 +3919,7 @@ namespace GymnasticsVideoGallery
                     break;
 
                 case Key.Up: //next keyframe
-                    Debug.Print("Key.Up skillslist focused " + SkillsList.IsFocused);
+                    Log("Key.Up skillslist focused " + SkillsList.IsFocused);
                     if (isVideoFullscreen && keyFrames.Count != 0 && !isPlaying) //if frames have been or being extracted
                     {
                         double lastKeyframe = keyFrames[keyFrames.Count - 1];
@@ -3995,7 +4018,7 @@ namespace GymnasticsVideoGallery
                         {
                             cutStart = middleIndexPos;
                         }
-                        //Debug.Print("pageup: " + TimelineSlider.Value);
+                        //Log("pageup: " + TimelineSlider.Value);
                         cutEnd = (cutStart > cutEnd) ? cutStart : cutEnd;
                         KeyFrameCanvas.Visibility = Visibility.Visible;
                         UpdateCutRect(true, true);
@@ -4127,7 +4150,7 @@ namespace GymnasticsVideoGallery
                     break;
 
                 case Key.Delete: //delete folder or media, or comment
-                    Debug.Print("Key.Delete " + currentPicIndex + Keyboard.IsKeyDown(Key.LeftCtrl) + Keyboard.IsKeyDown(Key.RightAlt)+ currentCommentPosIndex);
+                    Log("Key.Delete " + currentPicIndex + Keyboard.IsKeyDown(Key.LeftCtrl) + Keyboard.IsKeyDown(Key.RightAlt)+ currentCommentPosIndex);
                     if (SkillsList.IsKeyboardFocusWithin)
                     {
                         skillsListItem = (string)SkillsList.SelectedItem;
@@ -4137,7 +4160,7 @@ namespace GymnasticsVideoGallery
                     /*if (FocusManager.GetFocusedElement(this) is ListBoxItem)
                     {
                         ListBoxItem li = (ListBoxItem)FocusManager.GetFocusedElement(this);
-                        Debug.Print(li.ToString()); //VisualTreeHelper returns: VirtualizingStackPanel, itemsPresenter, SCrollContentPresenter , li.Parent returns null
+                        Log(li.ToString()); //VisualTreeHelper returns: VirtualizingStackPanel, itemsPresenter, SCrollContentPresenter , li.Parent returns null
                     }*/
                     else if (isVideoFullscreen && currentCommentPosIndex != -1 && Keyboard.IsKeyDown(Key.RightAlt))
                     {
@@ -4168,7 +4191,7 @@ namespace GymnasticsVideoGallery
                     break;
 
                 case Key.I:
-                    Debug.Print("Key.I currentPicIndex " + currentPicIndex + " " + ThumbScroll.IsFocused + " " + FocusManager.GetFocusedElement(this));
+                    Log("Key.I currentPicIndex " + currentPicIndex + " " + ThumbScroll.IsFocused + " " + FocusManager.GetFocusedElement(this));
 
                     if (FileInfoGrid.Visibility == Visibility.Visible) //the close the info box
                     {
@@ -4313,7 +4336,7 @@ namespace GymnasticsVideoGallery
 
             double duration = cutEndOffset - cutStartActual;
             string command = "-y -ss " + Convert.ToString(cutStartActual / 1000, CultureInfo.InvariantCulture) + " -i \"" + file + "\" -to " + Convert.ToString(duration / 1000, CultureInfo.InvariantCulture) + " -c copy \"" + newFile + "\"";
-            Debug.Print(command);
+            Log(command);
             var process = new Process();
             var startInfo = new ProcessStartInfo
             {
@@ -4398,7 +4421,7 @@ namespace GymnasticsVideoGallery
 
             if (this.WindowState == WindowState.Normal)
             {
-                //Debug.Print("Location changed, left: " + Left + " top: " + Top);
+                //Log("Location changed, left: " + Left + " top: " + Top);
                 //locChangeStw = new Stopwatch();
                 //locChangeStw.Start();
 
@@ -4428,7 +4451,7 @@ namespace GymnasticsVideoGallery
 
         /*private void LocChangeTimer_Tick(object sender, EventArgs e)
         {
-            Debug.Print("LocChangeTimer, Left: " + Left + " Top " + Top + " settingspageopen " + settingsPageOpen);
+            Log("LocChangeTimer, Left: " + Left + " Top " + Top + " settingspageopen " + settingsPageOpen);
             locChangeTimer.Stop();
             locChangeTimer = null;
 
@@ -4447,7 +4470,7 @@ namespace GymnasticsVideoGallery
 
             if (this.WindowState == WindowState.Maximized && !isVideoFullscreen && !isPictureFullscreen) //if we are not in video/picture view
             {
-                //Debug.Print("MainWindow1_StateChanged, windowState: " + this.WindowState + " windowStyle: " + this.WindowStyle + " startMaximized: " + settings["StartMaximized"] + " Left: " + Left + " Top " + Top);// + ", Stopwatch: " + locChangeStw.ElapsedMilliseconds);
+                //Log("MainWindow1_StateChanged, windowState: " + this.WindowState + " windowStyle: " + this.WindowStyle + " startMaximized: " + settings["StartMaximized"] + " Left: " + Left + " Top " + Top);// + ", Stopwatch: " + locChangeStw.ElapsedMilliseconds);
                 //locChangeTimer.Stop(); //the position changes do not get saved
                 //locChangeTimer = null;
                 if (this.WindowStyle == WindowStyle.None)
@@ -4516,7 +4539,7 @@ namespace GymnasticsVideoGallery
 
         private void SkillsList_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            //Debug.Print("SkillsList_SizeChanged " + e.PreviousSize.Width + " " + e.NewSize.Width);
+            //Log("SkillsList_SizeChanged " + e.PreviousSize.Width + " " + e.NewSize.Width);
             if (!changedByProgramInit)
             {
                 SaveSetting("SkillsListWidth", (int)ListScroll.ActualWidth);
@@ -4586,7 +4609,7 @@ namespace GymnasticsVideoGallery
 
         private void ExitFullScreen(bool toSave)
         {
-            //Debug.Print("ExitFullScreen" + settings["StartMaximized"] + settings["StartFullScreen"] + toSave);
+            //Log("ExitFullScreen" + settings["StartMaximized"] + settings["StartFullScreen"] + toSave);
             if (toSave) //F11 pressed, window has to exit full screen
             {
                 this.WindowStyle = WindowStyle.SingleBorderWindow;
@@ -4633,11 +4656,11 @@ namespace GymnasticsVideoGallery
         {
             if (changedByProgramList) return;
 
-            Debug.Print("SkillsList_SelectionChanged");
+            Log("SkillsList_SelectionChanged");
 
             /*if (windowActivating != null) //ca. 35 ms
             {
-                Debug.Print(windowActivating.ElapsedMilliseconds.ToString());
+                Log(windowActivating.ElapsedMilliseconds.ToString());
                 windowActivating = null;
             }*/
             if (windowActivatingTimer!= null && windowActivatingTimer.IsEnabled) //if selection changes upon window activation, update from that event is cancelled, and will take place now.
@@ -4664,7 +4687,7 @@ namespace GymnasticsVideoGallery
 
         private void SkillsList_SelectionChanged2(object sender, EventArgs e)
         {
-            Debug.Print("SkillsList_SelectionChanged2");
+            Log("SkillsList_SelectionChanged2");
             listTimer.Stop();
             listTimer = null;
             ClearThumbs();            
@@ -4675,7 +4698,7 @@ namespace GymnasticsVideoGallery
         {
             if (this.IsActive) //On startup, the Activated event runs at the same time as this function, but this function is the first.
             {
-                //Debug.Print("SortBy_SelectionChanged");
+                //Log("SortBy_SelectionChanged");
                 SaveSetting("SortBy", ((ComboBoxItem)SortBy.SelectedItem).Content.ToString());
                 ClearThumbs();
                 StartUpdateThumbs();
@@ -4686,7 +4709,7 @@ namespace GymnasticsVideoGallery
         {
             if (this.IsActive) //On startup, the Activated event runs at the same time as this function, but this function is the first.
             {
-                //Debug.Print("SortOrder_SelectionChanged");
+                //Log("SortOrder_SelectionChanged");
                 SaveSetting("SortOrder", ((ComboBoxItem)SortOrder.SelectedItem).Content.ToString());
                 ClearThumbs();
                 StartUpdateThumbs();
@@ -4695,7 +4718,7 @@ namespace GymnasticsVideoGallery
 
         private void ThumbSizeSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) //(int) will take a number's whole part, so 230.8 becames 230.
         {
-            //Debug.Print("ThumbSizeSlider_ValueChanged changedByProgramThumbs" + changedByProgramThumbs);
+            //Log("ThumbSizeSlider_ValueChanged changedByProgramThumbs" + changedByProgramThumbs);
             //do not resize the thumbnails, when: - the thumbs have finished loading - the scroll container changes size
             if (!changedByProgramThumbs)
             {
@@ -4715,12 +4738,12 @@ namespace GymnasticsVideoGallery
                 //Thumbs.UpdateLayout();  //Thumbs_SizeChanged is called here, but availWidth doesn't change yet, because ThumbScroll hasn't updated its scrollableheight value yet. 
                 //ThumbScroll.UpdateLayout();
                 //double newScrollHeight = ThumbScroll.ScrollableHeight;
-                //Debug.Print("ThumbSizeSlider_ValueChanged oldScrollHeight " + oldScrollHeight + " newScrollHeight " + newScrollHeight);
+                //Log("ThumbSizeSlider_ValueChanged oldScrollHeight " + oldScrollHeight + " newScrollHeight " + newScrollHeight);
                 
                 //do manual calculation instead. 
                 int rowNum = (int)Math.Ceiling(Thumbs.Children.Count / ThumbSizeSlider.Value);
                 double newScrollHeight = rowNum * (thumbH + 1) > ThumbScroll.ActualHeight ? rowNum * (thumbH + 1) - ThumbScroll.ActualHeight : 0;
-                Debug.Print("ThumbSizeSlider_ValueChanged oldScrollHeight " + oldScrollHeight + " newScrollHeight " + newScrollHeight);
+                Log("ThumbSizeSlider_ValueChanged oldScrollHeight " + oldScrollHeight + " newScrollHeight " + newScrollHeight);
 
                 if (oldScrollHeight > 0 && newScrollHeight == 0) //if the content shrinked, so the scrollbar disappeared, we resize the pictures again.
                 {
@@ -4870,7 +4893,7 @@ namespace GymnasticsVideoGallery
 
         private void LoadContent(object sender, System.Windows.Input.MouseEventArgs e)
         {
-            Debug.Print("LoadContent");
+            Log("LoadContent");
             Image i = (Image)sender;
             currentPicIndexExt = -1;
             string fileName = new Uri(i.Source.ToString()).LocalPath;
@@ -4910,14 +4933,14 @@ namespace GymnasticsVideoGallery
         {
             try
             {
-                Debug.Print("LoadVideo, fileName: " + fileName);
+                Log("LoadVideo, fileName: " + fileName);
 
                 if (FileInfoGrid.Visibility == Visibility.Visible)
                 {
                     Context_ShowInfo(null, null);
                 }
 
-                //Debug.Print("LoadVideo: ThumbScroll.ScrollableHeight: " + ThumbScroll.ScrollableHeight);
+                //Log("LoadVideo: ThumbScroll.ScrollableHeight: " + ThumbScroll.ScrollableHeight);
                 isPictureFullscreen = false;
                 ImageElement1.Source = null;
 
@@ -4953,11 +4976,11 @@ namespace GymnasticsVideoGallery
                     EnterFullScreen(false);
                 }*/
 
-                //Debug.Print("loadvideo, controlgrid visible? " + MainGrid.ActualHeight + " " + VideoControlGrid.ActualHeight + " " + System.Windows.Forms.Cursor.Position.Y +  " " + Mouse.GetPosition(MainGrid).Y);
+                //Log("loadvideo, controlgrid visible? " + MainGrid.ActualHeight + " " + VideoControlGrid.ActualHeight + " " + System.Windows.Forms.Cursor.Position.Y +  " " + Mouse.GetPosition(MainGrid).Y);
                 //Mouse.GetPosition(MainGrid).Y gives 0, when deleting a picture, and loading a video. Not when we are just stepping forward.
                 if (settings["SliderIsLocked"] || System.Windows.Forms.Cursor.Position.Y >= MainGrid.ActualHeight - VideoControlGrid.ActualHeight) //slider is set always visible, or the mouse is at the bottom of the window
                 {
-                    Debug.Print("control visible");
+                    Log("control visible");
                     VideoControlGrid.Visibility = Visibility.Visible;
                 }
 
@@ -4970,10 +4993,10 @@ namespace GymnasticsVideoGallery
                 FilenameText.Text = System.IO.Path.GetFileName(videoSource);
                 FilenameText.UpdateLayout();
 
-                //Debug.Print("loadvideo");
+                //Log("loadvideo");
                 var watch = Stopwatch.StartNew();
 
-                //Debug.Print("loadvideo, videosource: " + videoSource);
+                //Log("loadvideo, videosource: " + videoSource);
                 string[] arr = GetMediaInfo(videoSource, "Video;%Duration%,%FrameRate_Mode%,%FrameRate%");
 
                 watch.Stop();
@@ -5011,7 +5034,7 @@ namespace GymnasticsVideoGallery
 
         private void LoadPicture(string fileName)
         {
-            Debug.Print("LoadPicture " + fileName);
+            Log("LoadPicture " + fileName);
 
             if (FileInfoGrid.Visibility == Visibility.Visible)
             {
@@ -5130,7 +5153,7 @@ namespace GymnasticsVideoGallery
                 addFramesLater = false;
                 AddFrames();    
             }
-            //Debug.Print("mediaopened");
+            //Log("mediaopened");
             videoLoaded = true;
             isPlaying = true;
 
@@ -5157,7 +5180,7 @@ namespace GymnasticsVideoGallery
 
             if ((frameWindow == null || !frameWindow.IsVisible) && VideoControlGrid.Visibility == Visibility.Hidden)
             {
-                Debug.Print("MediaElement1_MediaOpened, hiding cursor:  VideoControlGrid.Visibility: " + VideoControlGrid.Visibility + " PictureControlGrid.Visibility: " + PictureControlGrid.Visibility);
+                Log("MediaElement1_MediaOpened, hiding cursor:  VideoControlGrid.Visibility: " + VideoControlGrid.Visibility + " PictureControlGrid.Visibility: " + PictureControlGrid.Visibility);
                 this.Cursor = System.Windows.Input.Cursors.None;
                 /*if (isCursorVisible)
                 {
@@ -5185,7 +5208,7 @@ namespace GymnasticsVideoGallery
                 {
                     stw.Reset();
                     this.Cursor = System.Windows.Input.Cursors.None;
-                    /*Debug.Print("Timer_Tick, hiding cursor: " + isCursorVisible);
+                    /*Log("Timer_Tick, hiding cursor: " + isCursorVisible);
                     if (isCursorVisible)
                     {
                         System.Windows.Forms.Cursor.Hide();
@@ -5195,7 +5218,7 @@ namespace GymnasticsVideoGallery
                 if (isPlaying) //when the video is paused, we manually update the slider's value, otherwise we can get imprecise values. We set the video to a position, but we will get back another.
                 {
                     TimelineSlider.Value = MediaElement1.Position.TotalMilliseconds;
-                    //Debug.Print(TimelineSlider.Value.ToString());
+                    //Log(TimelineSlider.Value.ToString());
                 }
 
             }
@@ -5203,13 +5226,13 @@ namespace GymnasticsVideoGallery
 
         private void TimelineSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            //Debug.Print("TimelineSlider_ValueChanged");
+            //Log("TimelineSlider_ValueChanged");
             TimeText.Text = TimeSpan.FromMilliseconds(TimelineSlider.Value).ToString(@"h\:mm\:ss\.fff");
         }
 
         private void ExitView()
         {
-            Debug.Print("Exitview currentPicIndex: " + currentPicIndex + " " + isVideoFullscreen + " " + isPictureFullscreen);
+            Log("Exitview currentPicIndex: " + currentPicIndex + " " + isVideoFullscreen + " " + isPictureFullscreen);
             if (isVideoFullscreen)
             {
                 ExitVideo();
@@ -5325,18 +5348,7 @@ namespace GymnasticsVideoGallery
         #endregion
 
         #region Picture control functions
-
-        private bool actualSizeView;
-        private bool movingImage;
-        private int moveStartX;
-        private int moveStartY;
-        private int imageStartX;
-        private int imageStartY;
-        private double? lastActualLeft;
-        private double? lastActualTop;
-        private int lastPixelWidth;
-        private int lastPixelHeight;
-
+        
         private void ActualSize_ToolTipOpening(object sender, ToolTipEventArgs e)
         {
             ActualSize.ToolTip = actualSizeView ? "Screen size" : "Actual size";
@@ -5344,7 +5356,7 @@ namespace GymnasticsVideoGallery
 
         private void SwitchActualSize(object sender, RoutedEventArgs e)
         {
-            Debug.Print("SwitchActualSize actualSizeView " + actualSizeView  + " " + ImageElement1.ActualWidth + " " + MainGrid.ActualWidth + " " + ImageElement1.ActualHeight + " " + MainGrid.ActualHeight + " lastActualLeft " + lastActualLeft + " lastActualTop " + lastActualTop);
+            Log("SwitchActualSize actualSizeView " + actualSizeView  + " " + ImageElement1.ActualWidth + " " + MainGrid.ActualWidth + " " + ImageElement1.ActualHeight + " " + MainGrid.ActualHeight + " lastActualLeft " + lastActualLeft + " lastActualTop " + lastActualTop);
 
             BitmapImage b = (BitmapImage)ImageElement1.Source;
             if (!actualSizeView)
@@ -5386,18 +5398,18 @@ namespace GymnasticsVideoGallery
         {
             double w;
             double h;
-            Debug.Print("OrigSize " + b.PixelWidth + " " + b.PixelHeight + " " + (double)b.PixelWidth / (double)b.PixelHeight + " " + MainGrid.ActualWidth + " " + MainGrid.ActualHeight + " " + MainGrid.ActualWidth / MainGrid.ActualHeight);
+            Log("OrigSize " + b.PixelWidth + " " + b.PixelHeight + " " + (double)b.PixelWidth / (double)b.PixelHeight + " " + MainGrid.ActualWidth + " " + MainGrid.ActualHeight + " " + MainGrid.ActualWidth / MainGrid.ActualHeight);
             if ((double)b.PixelWidth / (double)b.PixelHeight >= MainGrid.ActualWidth / MainGrid.ActualHeight) //image is wider, or same ratio as screen. 2592/1456 gives 1, if (double) cast is not used.
             {
                 w = MainGrid.ActualWidth;
                 h = MainGrid.ActualWidth * b.PixelHeight / b.PixelWidth;
-                Debug.Print("OrigSize, image is wide." + w + " " + h);
+                Log("OrigSize, image is wide." + w + " " + h);
             }
             else
             {
                 h = MainGrid.ActualHeight;
                 w = MainGrid.ActualHeight * b.PixelWidth / b.PixelHeight;
-                Debug.Print("OrigSize, image is tall." + w + " " + h);
+                Log("OrigSize, image is tall." + w + " " + h);
             }
             ImageElement1.Width = w;
             ImageElement1.Height = h;
@@ -5413,7 +5425,7 @@ namespace GymnasticsVideoGallery
             moveStartY = (int)pos.Y;
             imageStartX = (int)ImageElement1.Margin.Left;
             imageStartY = (int)ImageElement1.Margin.Top;
-            Debug.Print("ImageElement1_MouseLeftButtonDown imageStartX " + imageStartX + " imageStartY " + imageStartY);
+            Log("ImageElement1_MouseLeftButtonDown imageStartX " + imageStartX + " imageStartY " + imageStartY);
         }
 
         private void ImageElement1_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
@@ -5426,7 +5438,7 @@ namespace GymnasticsVideoGallery
                 
                 double left = -(ImageElement1.ActualWidth - MainGrid.ActualWidth) / 2; //centered default value for small images.
                 double top = -(ImageElement1.ActualHeight - MainGrid.ActualHeight) / 2;
-                Debug.Print("ImageElement1_MouseMove " + ImageElement1.ActualWidth + " " + left);
+                Log("ImageElement1_MouseMove " + ImageElement1.ActualWidth + " " + left);
                 if (ImageElement1.ActualWidth > MainGrid.ActualWidth)
                 {
                     int diffX = (int)pos.X - moveStartX;
@@ -5439,7 +5451,7 @@ namespace GymnasticsVideoGallery
                     top = imageStartY + diffY <= 0 ? imageStartY + diffY : 0;
                     top = top >= MainGrid.ActualHeight - ImageElement1.ActualHeight ? top : MainGrid.ActualHeight - ImageElement1.ActualHeight;
                 }
-                Debug.Print("ImageElement1_MouseMove2 " + left + " " + top);
+                Log("ImageElement1_MouseMove2 " + left + " " + top);
                 ImageElement1.Margin = new Thickness(left, top, 0, 0);
                 lastActualLeft = left;
                 lastActualTop = top;
@@ -5510,13 +5522,13 @@ namespace GymnasticsVideoGallery
 
             if (extVideoSource == videoSource) //frames are being extracted of the current video. We are in video view mode.
             {
-                Debug.Print("UpdateCutRect frames are being extracted");
+                Log("UpdateCutRect frames are being extracted");
                 double lastKeyframe = (keyFrames.Count == 0) ? 0 : keyFrames[keyFrames.Count - 1];  //at the start of extraction, no keyframes exist.  
-                Debug.Print("UpdateCutRect lastKeyframe " + lastKeyframe + " cutStartOffset " + cutStartOffset);
+                Log("UpdateCutRect lastKeyframe " + lastKeyframe + " cutStartOffset " + cutStartOffset);
                 if (lastKeyframe >= cutStartOffset) //we can certainly get the preceding keyframe
                 {
                     cutStartActual = GetPrevKeyFrame(cutStartOffset);
-                    Debug.Print("UpdateCutRect cutStartActual " + cutStartActual);
+                    Log("UpdateCutRect cutStartActual " + cutStartActual);
                     cutStartActualOffset = cutStartOffset; //only important, if the index file is deleted externally
                     CutRectActual.Margin = new Thickness(cutStartActual / videoDuration * (TimelineSlider.ActualWidth - 15) + 7.5, 0, 0, 0);
                     CutRectActual.Width = (cutEndOffset - cutStartActual) / videoDuration * (TimelineSlider.ActualWidth - 15) - 1;//-1 is to prevent visibility at the selection's end due to pixel rendering
@@ -5621,7 +5633,7 @@ namespace GymnasticsVideoGallery
             cutStartActualOffset = cutStartOffset;
 
             stwLocal.Stop();
-            Debug.Print("Finding preceding keyframe: " + stwLocal.ElapsedMilliseconds.ToString());
+            Log("Finding preceding keyframe: " + stwLocal.ElapsedMilliseconds.ToString());
 
             //update visual selection.
             CutRectActual.Margin = new Thickness(cutStartActual / videoDuration * (TimelineSlider.ActualWidth - 15) + 7.5, 0, 0, 0);
@@ -5657,7 +5669,7 @@ namespace GymnasticsVideoGallery
         private double FindPrecedingKeyframe(double pos, string videoFile)
         {
             string command = "-select_streams v -show_frames -show_entries frame=pict_type,pkt_pts_time -of csv -read_intervals " + Convert.ToString(pos / 1000, CultureInfo.InvariantCulture) + "%+#1 \"" + videoFile + "\"";
-            Debug.Print(command);
+            Log(command);
             Process process = new Process();
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
@@ -5711,7 +5723,7 @@ namespace GymnasticsVideoGallery
                 for (int i = 0; i < arr2.Length; i++)
                 {
                     string[] arr3 = arr2[i].Split('\t');
-                    Debug.Print("Drawing comment marker at " + i + ", " + double.Parse(arr3[0], CultureInfo.InvariantCulture) + " " + arr3[1]);
+                    Log("Drawing comment marker at " + i + ", " + double.Parse(arr3[0], CultureInfo.InvariantCulture) + " " + arr3[1]);
                     DrawCommentMarker(i, double.Parse(arr3[0], CultureInfo.InvariantCulture), arr3[1]);
                 }
             }
@@ -5866,7 +5878,7 @@ namespace GymnasticsVideoGallery
 
         private void SpeedRatioSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            //Debug.Print("SpeedRatioSlider_ValueChanged, value: " + SpeedRatioSlider.Value + ", slider dragging " + SpeedRatioSlider.sliderDragging);
+            //Log("SpeedRatioSlider_ValueChanged, value: " + SpeedRatioSlider.Value + ", slider dragging " + SpeedRatioSlider.sliderDragging);
            if (!SpeedRatioSlider.sliderDragging && !changedByProgramInit)
             {
                 MediaElement1.SpeedRatio = SpeedRatioSlider.Value;
@@ -5916,7 +5928,7 @@ namespace GymnasticsVideoGallery
 
         private void StopVideo()
         {
-            //Debug.Print("StopVideo: " + MediaElement1.Position.TotalMilliseconds);
+            //Log("StopVideo: " + MediaElement1.Position.TotalMilliseconds);
             MediaElement1.Stop();
             TimelineSlider.Value = 0;
             GetMiddleIndexPos(0);
@@ -5927,10 +5939,10 @@ namespace GymnasticsVideoGallery
 
         public void GetMiddleIndexPos(double pos)
         {
-            Debug.Print("GetMiddleIndexPos frameIndex.Count " + frameIndex.Count);
+            Log("GetMiddleIndexPos frameIndex.Count " + frameIndex.Count);
             if (settings["SkillsPath"] != "" && File.Exists(OrigToIndex(videoSource)))  //if the index of frame exists, we will find the middle position of the current frame.
             {
-                //Debug.Print("GetMiddleIndexPos: pos: " + pos);
+                //Log("GetMiddleIndexPos: pos: " + pos);
                 double perc = pos / videoDuration;
                 //Example:
                 //Frames at 0 10 20, duration is 30
@@ -5948,9 +5960,9 @@ namespace GymnasticsVideoGallery
                     currentFrameIndexPos = frameIndex[currentFrameIndex];
                 }
 
-                Debug.Print("GetMiddleIndexPos: " + pos + " " + currentFrameIndex + " " + currentFrameIndexPos + " " + frameIndex.Count);
+                Log("GetMiddleIndexPos: " + pos + " " + currentFrameIndex + " " + currentFrameIndexPos + " " + frameIndex.Count);
 
-                //Debug.Print("GetMiddleIndexPos: currentFrameIndexPos: " + currentFrameIndexPos);
+                //Log("GetMiddleIndexPos: currentFrameIndexPos: " + currentFrameIndexPos);
 
                 //Example:
                 //forward frame step: 0, 16, 29, 57, 72, 85, 99
@@ -5985,22 +5997,22 @@ namespace GymnasticsVideoGallery
                         {
                             secondcurrentFrameIndexPos = videoDuration;
                         }
-                        //Debug.Print("secondcurrentFrameIndexPos: " + secondcurrentFrameIndexPos.ToString(CultureInfo.InvariantCulture) + ", pos: " + pos.ToString(CultureInfo.InvariantCulture));
+                        //Log("secondcurrentFrameIndexPos: " + secondcurrentFrameIndexPos.ToString(CultureInfo.InvariantCulture) + ", pos: " + pos.ToString(CultureInfo.InvariantCulture));
 
                         //what if duration is 345 ms, but pos is 345.5? Loop will end, when secondcurrentFrameIndexPos reaches videoDuration.
                         //what if duration is 345 ms, but pos is 344.5? Loop will end of both terms.
 
                         //rounding is done now upon adding the timestamps to frameIndex.
-                        //Debug.Print((secondcurrentFrameIndexPos == pos).ToString()); //false
+                        //Log((secondcurrentFrameIndexPos == pos).ToString()); //false
                         //both of these will work:
                         //secondcurrentFrameIndexPos = double.Parse(secondcurrentFrameIndexPos.ToString(CultureInfo.InvariantCulture),CultureInfo.InvariantCulture);
                         //secondcurrentFrameIndexPos = Math.Round(secondcurrentFrameIndexPos, 3);
-                        //Debug.Print((secondcurrentFrameIndexPos == pos).ToString()); //true
+                        //Log((secondcurrentFrameIndexPos == pos).ToString()); //true
                     }
                     while ((secondcurrentFrameIndexPos <= pos) && (secondcurrentFrameIndexPos < videoDuration));
                     currentFrameIndex--; //the average time belongs to the previous frame
                 }
-                //Debug.Print(currentFrameIndexPos + " " + secondcurrentFrameIndexPos);
+                //Log(currentFrameIndexPos + " " + secondcurrentFrameIndexPos);
                 middleIndexPos = (currentFrameIndexPos + secondcurrentFrameIndexPos) / 2;
 
                 if (secondcurrentFrameIndexPos < currentFrameIndexPos) //take the lower value as the current frame's position
@@ -6149,14 +6161,31 @@ namespace GymnasticsVideoGallery
             System.Windows.MessageBox.Show(Convert.ToString(s, CultureInfo.InvariantCulture));
         }
 
-        private void CW(string s)
-        {
-            Console.WriteLine("---------- " + s + " ----------");
-        }
-
         #endregion
 
         #region Debug
+
+        private void Log(string message)
+        {
+            LogActivity(message);
+            CW(message);
+        }
+
+        public void LogActivity(string message)
+        {
+            try
+            {
+                File.AppendAllLines(logFile, new string[] { DateTime.UtcNow.ToString(@"yyyy-MM-dd HH\:mm\:ss.fff") + "  " + message });
+            }
+            catch
+            {
+            }
+        }
+
+        private void CW(string message)
+        {
+            Console.WriteLine(DateTime.UtcNow.ToString(@"yyyy-MM-dd HH\:mm\:ss.fff") + " ----------" + message + "----------" + System.Environment.NewLine);
+        }
 
         private void WriteStatus()
         {
@@ -6251,7 +6280,7 @@ namespace GymnasticsVideoGallery
         {
             dialogActivation = true;
             var confirmResult = System.Windows.MessageBox.Show("Are you sure you want to erase all your settings, and restore the defaults?", "Confirm reset", MessageBoxButton.YesNo); //Window activation event runs here.
-            //Debug.Print("SettingsDefaultButton_Click Dialog closed");
+            //Log("SettingsDefaultButton_Click Dialog closed");
             dialogActivation = false;
             
             if (confirmResult == MessageBoxResult.Yes)
@@ -6265,7 +6294,7 @@ namespace GymnasticsVideoGallery
 
                 foreach (KeyValuePair<string, dynamic> kvp in settings) { changedSettings[kvp.Key] = kvp.Value; }
 
-                Debug.Print("SettingsDefaultButton_Click count " + changedSettings.Count.ToString());
+                Log("SettingsDefaultButton_Click count " + changedSettings.Count.ToString());
                 SettingsApplyButton_Click(null, null); //settings that are set in the program will not be visible (without restart of the program), like thumbnail sort order.
                 
                 //settings not set on settings page
@@ -6335,7 +6364,7 @@ namespace GymnasticsVideoGallery
             }
 
             //Applying layout settings, even if they are not changed.
-            Debug.Print("Settingsapply screen size " + SystemParameters.WorkArea.Height + " " + SystemParameters.WorkArea.Width);
+            Log("Settingsapply screen size " + SystemParameters.WorkArea.Height + " " + SystemParameters.WorkArea.Width);
 
             //window can only be centered on startup, now we do it manually.
 
@@ -6479,11 +6508,11 @@ namespace GymnasticsVideoGallery
             SettingsResetButton.IsEnabled = false;
             foreach (KeyValuePair<string, dynamic> kvp in settings)
             {
-                //Debug.Print("LoadSettings " + kvp.Key);
+                //Log("LoadSettings " + kvp.Key);
                 if (kvp.Key != "SelectedSkill" && kvp.Key != "SortBy" && kvp.Key != "SortOrder" && kvp.Key != "ShowFileNames" && kvp.Key != "ShowExtractStatus" && kvp.Key != "SliderIsLocked"
                     && kvp.Key != "CommentsLocked"  && kvp.Key != "SpeedRatio" && kvp.Key != "VideoVolume" && kvp.Key != "FrameRatioSlider")
                 {
-                    //Debug.Print(kvp.Key);
+                    //Log(kvp.Key);
                     if (kvp.Value is string)
                     {
                         System.Windows.Controls.TextBox control = (System.Windows.Controls.TextBox)this.FindName("Setting" + kvp.Key);
@@ -6583,14 +6612,14 @@ namespace GymnasticsVideoGallery
             }
             
             SettingsIsModified();
-            //Debug.Print("RegisterSettingChange, changedsettings count: " + changedSettings.Count);
+            //Log("RegisterSettingChange, changedsettings count: " + changedSettings.Count);
         }
 
         private void StartFullScreen_Set() //takes into account all 3 checkboxes to determine which fields should be disabled.
         {
             if (changedByProgramSettings) return;
 
-            Debug.Print("StartFullScreen_Set");
+            Log("StartFullScreen_Set");
             if ((bool)SettingStartFullScreen.IsChecked)
             {
                 SettingStartMaximized.IsEnabled = false;
@@ -6640,7 +6669,7 @@ namespace GymnasticsVideoGallery
         private void SettingNumericField_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (changedByProgramSettings) return;
-            Debug.Print("SettingNumericField_TextChanged");
+            Log("SettingNumericField_TextChanged");
             NumericField obj = (NumericField)sender;
             string settingName = obj.Name.Replace("Setting", "");
             string text = obj.Text;
@@ -6662,7 +6691,7 @@ namespace GymnasticsVideoGallery
 
         private void SettingNumericField_LostFocus(object sender, RoutedEventArgs e) //use the last successful value, or from settings
         {
-            Debug.Print("SettingNumericField_LostFocus");
+            Log("SettingNumericField_LostFocus");
             NumericField obj = (NumericField)sender;
             string settingName = obj.Name.Replace("Setting", "");
             int num = changedSettings.ContainsKey(settingName) ? changedSettings[settingName] : settings[settingName];
@@ -6813,7 +6842,7 @@ namespace GymnasticsVideoGallery
                 ListRename.Visibility = Visibility.Visible;
                 ListDelete.Visibility = Visibility.Visible;
             }
-            Debug.Print("SkillsList_ContextMenuOpening "+ skillsListItem + " " + skillsListIndex + " " + ListScroll.ContentVerticalOffset);
+            Log("SkillsList_ContextMenuOpening "+ skillsListItem + " " + skillsListIndex + " " + ListScroll.ContentVerticalOffset);
             //though menu opens, we cannot select menuitems, while thumbnails are laoding.
             Dispatcher.Invoke(new Action(() => { }), DispatcherPriority.ContextIdle);
             //e.Handled = true;
@@ -6826,9 +6855,9 @@ namespace GymnasticsVideoGallery
             ListNewField.Focus();
             
             /*Point relativePoint = skillsListItem.TransformToAncestor(SkillsList).Transform(new Point(0, 0));
-            Debug.Print(relativePoint.X + " " + relativePoint.Y);
+            Log(relativePoint.X + " " + relativePoint.Y);
             relativePoint = skillsListItem.TransformToAncestor(MainGrid).Transform(new Point(0, 0));
-            Debug.Print(relativePoint.X + " " + relativePoint.Y);*/
+            Log(relativePoint.X + " " + relativePoint.Y);*/
         }
 
         private void ListRename_Click(object sender, RoutedEventArgs e) //click on the menu item
@@ -6844,9 +6873,9 @@ namespace GymnasticsVideoGallery
             
             //implement also mouse click to escape field.
 
-            //Debug.Print("ListRename_Click menuitem PointFromScreen " + skillsListItem.PointFromScreen(new Point(0, 0)).X + " " + skillsListItem.PointFromScreen(new Point(0, 0)).Y);
-            //Debug.Print("ListRename_Click menuitem PointToScreen " + skillsListItem.PointToScreen(new Point(0, 0)).X + " " + skillsListItem.PointToScreen(new Point(0, 0)).Y);
-            //Debug.Print("ListRename_Click menuitem PointToScreen " + skillsListItem.PointToScreen(new Point(0, 0)).X + " " + skillsListItem.PointToScreen(new Point(0, 0)).Y);
+            //Log("ListRename_Click menuitem PointFromScreen " + skillsListItem.PointFromScreen(new Point(0, 0)).X + " " + skillsListItem.PointFromScreen(new Point(0, 0)).Y);
+            //Log("ListRename_Click menuitem PointToScreen " + skillsListItem.PointToScreen(new Point(0, 0)).X + " " + skillsListItem.PointToScreen(new Point(0, 0)).Y);
+            //Log("ListRename_Click menuitem PointToScreen " + skillsListItem.PointToScreen(new Point(0, 0)).X + " " + skillsListItem.PointToScreen(new Point(0, 0)).Y);
         }
 
         private void ListScroll_ScrollChanged(object sender, ScrollChangedEventArgs e) //moves textfield as we scroll the listbox
@@ -6987,8 +7016,8 @@ namespace GymnasticsVideoGallery
         {
             System.IO.Directory.CreateDirectory(settings["SkillsPath"] + newName);
             SkillsListSource.Add(newName);
-            Debug.Print("NewDir adding " + newName);
-            Debug.Print("NewDird adding " + newName);
+            Log("NewDir adding " + newName);
+            Log("NewDird adding " + newName);
             SkillsListSource.Sort();
             changedByProgramList = true;
             object tempSelectedItem = SkillsList.SelectedItem;
@@ -7000,7 +7029,7 @@ namespace GymnasticsVideoGallery
             Dispatcher.Invoke(new Action(() => { }), DispatcherPriority.ContextIdle); //ensures, FocusListItem does not cause the problem above.
 
             SkillsList.SelectedItem = tempSelectedItem;
-            Debug.Print("NewDir selectedItem " + SkillsList.SelectedItem);
+            Log("NewDir selectedItem " + SkillsList.SelectedItem);
             changedByProgramList = false;
 
             FocusListItem(); //list will not scroll now to make the new dir visible, if it is out of range. List only scrolls as long as current directory is in range.
@@ -7023,7 +7052,7 @@ namespace GymnasticsVideoGallery
             int lastVisibleIndex = (int)Math.Floor((ListScroll.VerticalOffset + ListScroll.ActualHeight) / 20) - 1;
             lastVisibleIndex = lastVisibleIndex <= SkillsListSource.Count-1 ? lastVisibleIndex : SkillsListSource.Count-1;
 
-            Debug.Print("NewDir2: " + SkillsListSource.Count + " " + newIndex + " " + vissibleItemCount + " " + firstVisibleIndex + " " + lastVisibleIndex);
+            Log("NewDir2: " + SkillsListSource.Count + " " + newIndex + " " + vissibleItemCount + " " + firstVisibleIndex + " " + lastVisibleIndex);
 
             if (newIndex >= firstVisibleIndex && newIndex <= lastVisibleIndex)
             {
@@ -7032,7 +7061,7 @@ namespace GymnasticsVideoGallery
             else //outside of visible range, try to center it.
             {
                 double vertOffset = newIndex * 20 - (ListScroll.ActualHeight - 20) / 2;
-                Debug.Print("NewDir3 " + vertOffset + " " + ListScroll.ScrollableHeight);
+                Log("NewDir3 " + vertOffset + " " + ListScroll.ScrollableHeight);
                 if (vertOffset < 0) vertOffset = 0; //not necessary
                 if (vertOffset > ListScroll.ScrollableHeight) vertOffset = ListScroll.ScrollableHeight; //not necessary
                 ListScroll.ScrollToVerticalOffset(vertOffset);
@@ -7042,11 +7071,11 @@ namespace GymnasticsVideoGallery
 
         private void RenameDir(string oldName, string newName, bool caseChange)
         {
-            Debug.Print("RenameDir " + oldName + " " + newName);
+            Log("RenameDir " + oldName + " " + newName);
             if (caseChange) //we have to rename dir to a temporary one.
             {
                 String timeStamp = DateTime.Now.Ticks.ToString();
-                Debug.Print("RenameDir, Timestamp: " + timeStamp);
+                Log("RenameDir, Timestamp: " + timeStamp);
                 System.IO.Directory.Move(settings["SkillsPath"] + oldName, settings["SkillsPath"] + oldName + timeStamp);
                 System.IO.Directory.Move(settings["SkillsPath"] + oldName + timeStamp, settings["SkillsPath"] + newName);
             }
@@ -7111,24 +7140,24 @@ namespace GymnasticsVideoGallery
                     newSource = oldSource.Replace(settings["SkillsPath"] + oldName, settings["SkillsPath"] + newName);
                 }
 
-                Debug.Print("changing thumbnail oldSource " + oldSource + " newSource " + newSource);
+                Log("changing thumbnail oldSource " + oldSource + " newSource " + newSource);
 
                 BitmapImage imageBitmap = new BitmapImage();
                 imageBitmap.BeginInit();
                 imageBitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
                 imageBitmap.CacheOption = BitmapCacheOption.OnLoad;//makes it possible to delete the image, otherwise it will be locked. If I set it to OnLoad however, the image will not refresh when the thumbnail image file refreshes.
-                Debug.Print("Renamedir, generating new thumbs " + newSource);
+                Log("Renamedir, generating new thumbs " + newSource);
                 imageBitmap.UriSource = new Uri(newSource, UriKind.Absolute);
                 imageBitmap.EndInit();
                 im.Source = imageBitmap;
 
                 displayedThumbs.Add(newSource);
             }
-            Debug.Print("changed " + Thumbs.Children.Count + " pics in " + stw.ElapsedMilliseconds);
+            Log("changed " + Thumbs.Children.Count + " pics in " + stw.ElapsedMilliseconds);
             stw.Stop();
             foreach (string src in displayedThumbs)
             {
-                Debug.Print("displayedThumbs: " + src);
+                Log("displayedThumbs: " + src);
             }
         }
 
@@ -7154,7 +7183,7 @@ namespace GymnasticsVideoGallery
         //When entering window from left side, list selection has already changed.
         //Desired behavior: the element that has the focus will get it back when drag is ended.
         {
-            Debug.Print("MainWindow1_DragEnter, activating");
+            Log("MainWindow1_DragEnter, activating");
             this.Activate();
 
             //private Stopwatch dragstw;
@@ -7168,14 +7197,14 @@ namespace GymnasticsVideoGallery
         //We will set and reset cancelThumbLosingFocus each time DragEnter and DragLeave happens, the important thing is that it is set during DragOver,
         //and that it is reset when we actually leave the window.
         {
-            Debug.Print("MainWindow1_DragLeave focused element: " + FocusManager.GetFocusedElement(this));
+            Log("MainWindow1_DragLeave focused element: " + FocusManager.GetFocusedElement(this));
             // from internal drag: focused element is ThumbScroll of ListBoxItem (when we have scrolled the list during dragging).
             // from external drag: focused element is ListBoxItem 
         }
 
         private void SkillsList_DragOver(object sender, System.Windows.DragEventArgs e) //changes list selection
         {
-            //Debug.Print("SkillsList_DragOver, SkillsList.X " + e.GetPosition(SkillsList).X + " SkillsList.Y " + e.GetPosition(SkillsList).Y + " ListScroll.X " + e.GetPosition(ListScroll).X + " ListScroll.Y " + e.GetPosition(ListScroll).Y + " this.X " + e.GetPosition(this).X + " this.Y " + e.GetPosition(this).Y);
+            //Log("SkillsList_DragOver, SkillsList.X " + e.GetPosition(SkillsList).X + " SkillsList.Y " + e.GetPosition(SkillsList).Y + " ListScroll.X " + e.GetPosition(ListScroll).X + " ListScroll.Y " + e.GetPosition(ListScroll).Y + " this.X " + e.GetPosition(this).X + " this.Y " + e.GetPosition(this).Y);
 
             double index = ((int)e.GetPosition(SkillsList).Y - 2) / 20;
             changedByProgramList = true;
@@ -7183,7 +7212,7 @@ namespace GymnasticsVideoGallery
             changedByProgramList = false;
             //not putting focus on list item here. So there is no need to restore it, when the mouse exits the list area.
 
-            //Debug.Print("SkillsList_DragOver Y " + e.GetPosition(ListScroll).Y + " " + ListScroll.ActualHeight);
+            //Log("SkillsList_DragOver Y " + e.GetPosition(ListScroll).Y + " " + ListScroll.ActualHeight);
             //mouse dragged to bottom
             if (e.GetPosition(ListScroll).Y > ListScroll.ActualHeight - 10 && ListScroll.ContentVerticalOffset < ListScroll.ScrollableHeight) //haven't reached the bottom
             {
@@ -7259,9 +7288,9 @@ namespace GymnasticsVideoGallery
         //dragleave cannot be used for determining mouse position for restoring list selection, gives incorrect values, or doesn't give the negative value for left side exit.
         {
             int subtr = ListScroll.ScrollableHeight == 0 ? 0 : 18;
-            //Debug.Print("MainWindow1_DragOver e.GetPosition(ListScroll).X " + e.GetPosition(ListScroll).X + " settings[SkillsListWidth] - subtr " + ((int)settings["SkillsListWidth"] - subtr));            
+            //Log("MainWindow1_DragOver e.GetPosition(ListScroll).X " + e.GetPosition(ListScroll).X + " settings[SkillsListWidth] - subtr " + ((int)settings["SkillsListWidth"] - subtr));            
 
-            //Debug.Print("MainWindow1_DragOver SkillsList.X " + e.GetPosition(SkillsList).X + " SkillsList.Y " + e.GetPosition(SkillsList).Y + " ListScroll.X " + e.GetPosition(ListScroll).X + " ListScroll.Y " + e.GetPosition(ListScroll).Y + " this.X " + e.GetPosition(this).X + " this.Y " + e.GetPosition(this).Y);
+            //Log("MainWindow1_DragOver SkillsList.X " + e.GetPosition(SkillsList).X + " SkillsList.Y " + e.GetPosition(SkillsList).Y + " ListScroll.X " + e.GetPosition(ListScroll).X + " ListScroll.Y " + e.GetPosition(ListScroll).Y + " this.X " + e.GetPosition(this).X + " this.Y " + e.GetPosition(this).Y);
             
             
             if (e.GetPosition(ListScroll).X > settings["SkillsListWidth"] - subtr) //list right side exit for external file drop.
@@ -7288,7 +7317,7 @@ namespace GymnasticsVideoGallery
                 SkillsList.SelectedItem = settings["SelectedSkill"]; //restore selection
                 changedByProgramList = false;
 
-                Debug.Print("MainWindow1_DragOver focusing list item");
+                Log("MainWindow1_DragOver focusing list item");
 
                 //focusing list item is not necessary, it hasn't changed, when the mouse was moving over the list.                              
             }
@@ -7308,7 +7337,7 @@ namespace GymnasticsVideoGallery
 
         private void DragListTimer_Tick(object sender, EventArgs e)
         {
-            Debug.Print("DragListTimer_Tick");
+            Log("DragListTimer_Tick");
             dragListTimer.Stop();
             dragListTimer = null;
              
@@ -7335,7 +7364,7 @@ namespace GymnasticsVideoGallery
 
         private void MainWindow1_Drop(object sender, System.Windows.DragEventArgs e) //dropping file anywhere, or into SkillsList, where the selection changes (unnotified)
         {
-            Debug.Print("MainWindow1_Drop");
+            Log("MainWindow1_Drop");
             if (!System.IO.Directory.Exists(settings["SkillsPath"]))
             {
                 dialogActivation = true;
@@ -7345,9 +7374,9 @@ namespace GymnasticsVideoGallery
             }
             if (e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop))
             {
-                Debug.Print("MainWindow1_Drop FileDrop");
+                Log("MainWindow1_Drop FileDrop");
                 string[] files = (string[])e.Data.GetData(System.Windows.DataFormats.FileDrop);
-                Debug.Print(files.Length + files[0]);
+                Log(files.Length + files[0]);
                 bool isCopy = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) ? true : false;
 
                 bool operationHappened;
@@ -7358,7 +7387,7 @@ namespace GymnasticsVideoGallery
                 {
                     string newFile = (string)SkillsList.SelectedItem == "." ? settings["SkillsPath"] + System.IO.Path.GetFileName(origFile) :
                         settings["SkillsPath"] + SkillsList.SelectedItem + @"\" + System.IO.Path.GetFileName(origFile);
-                    Debug.Print("MainWindow1_Drop origFile: " + origFile + ", newFile: " + newFile);
+                    Log("MainWindow1_Drop origFile: " + origFile + ", newFile: " + newFile);
 
                     if (settings["SkillsPath"] == "" || origFile.IndexOf(settings["SkillsPath"]) == -1) //external file
                     {
@@ -7374,7 +7403,7 @@ namespace GymnasticsVideoGallery
                         //file can be either in the selected category (need to remove thumb), or in another.
                         string origSkill = origFile.Replace(settings["SkillsPath"], "").Replace(System.IO.Path.GetFileName(origFile), "");
                         origSkill = origSkill == "" ? "." : origSkill.Replace(@"\", "");
-                        Debug.Print("MainWindow1_Drop internal file isCopy " + isCopy + " origSkill " + origSkill + " SkillsList.SelectedItem " + SkillsList.SelectedItem);
+                        Log("MainWindow1_Drop internal file isCopy " + isCopy + " origSkill " + origSkill + " SkillsList.SelectedItem " + SkillsList.SelectedItem);
                         if (origSkill != (string)SkillsList.SelectedItem) //not copying / moving into same dir
                         {
                             bool[] result = CopyMoveFileStart(origFile, newFile, isCopy, true, dialogNeeded);
@@ -7465,7 +7494,7 @@ namespace GymnasticsVideoGallery
         private void CopyMoveFile(string origFile, string newFile, bool isCopy, bool internalFile)
         //internalOperation removes thumbnail. internalFile copies / moves associated files.
         {
-            //Debug.Print("CopyMoveFile" + e.AllowedEffects);
+            //Log("CopyMoveFile" + e.AllowedEffects);
             try
             {
                 if (System.IO.Path.GetExtension(origFile).ToLower() == ".jpg" || System.IO.Path.GetExtension(origFile).ToLower() == ".png") //picture
@@ -7670,16 +7699,16 @@ namespace GymnasticsVideoGallery
                 int[] tempSelectedPicIndexes = selectedPicIndexes.ToArray(); //RemoveThumb shrinks the array of selected indexes. Using the original array, only half of the items would get deleted.
                 deleteSelectedPics = true;
                 int counter = 0;
-                Debug.Print("DeleteSelected_Click before cycle, joined array " + String.Join(";",tempSelectedPicIndexes));
+                Log("DeleteSelected_Click before cycle, joined array " + String.Join(";",tempSelectedPicIndexes));
                 foreach (int index in tempSelectedPicIndexes)
                 {
-                    Debug.Print("DeleteSelected_Click before delete, index " + index + " counter " + counter + " selectedPicIndexes " + String.Join(";", selectedPicIndexes));
+                    Log("DeleteSelected_Click before delete, index " + index + " counter " + counter + " selectedPicIndexes " + String.Join(";", selectedPicIndexes));
                     currentPicIndex = index - counter; //indexes shift with each deletion.
                     Context_Delete(null, null, false);
-                    Debug.Print("DeleteSelected_Click after delete, index " + index + " counter " + counter+ " selectedPicIndexes " + String.Join(";", selectedPicIndexes));
+                    Log("DeleteSelected_Click after delete, index " + index + " counter " + counter+ " selectedPicIndexes " + String.Join(";", selectedPicIndexes));
                     counter++;
                 }
-                Debug.Print("DeleteSelected_Click after cycle, joined array " + String.Join(";", tempSelectedPicIndexes));
+                Log("DeleteSelected_Click after cycle, joined array " + String.Join(";", tempSelectedPicIndexes));
                 deleteSelectedPics = false;
                 BorderRect.Visibility = Visibility.Hidden;
                 currentPicIndex = -1; //currentPicIndex gets reset in any case.                
@@ -7704,7 +7733,7 @@ namespace GymnasticsVideoGallery
             }
             catch (Exception ex)
             {
-                Debug.Print(ex.Message + " " + ex.StackTrace);
+                Log(ex.Message + " " + ex.StackTrace);
             }            
         }        
 
@@ -7756,7 +7785,7 @@ namespace GymnasticsVideoGallery
             }
             catch (Exception ex)
             {
-                Debug.Print(ex.Message + " " + ex.StackTrace);
+                Log(ex.Message + " " + ex.StackTrace);
             }
         }
 
@@ -7778,7 +7807,7 @@ namespace GymnasticsVideoGallery
             }
             catch (Exception ex)
             {
-                Debug.Print(ex.Message + " " + ex.StackTrace);
+                Log(ex.Message + " " + ex.StackTrace);
             }
         }        
 
@@ -7803,11 +7832,11 @@ namespace GymnasticsVideoGallery
             {
                 string dirPath = (dirName == ".") ? settings["SkillsPath"] : settings["SkillsPath"] + dirName + @"\";
                 string[] files = System.IO.Directory.GetFiles(dirPath);
-                //Debug.Print(dirPath + " " + files.Length);
+                //Log(dirPath + " " + files.Length);
                 foreach (string origFile in files)
                 {
                     string thumb = OrigToThumb(origFile);
-                    //Debug.Print(origFile + " " + thumb);                    
+                    //Log(origFile + " " + thumb);                    
                     if (!File.Exists(thumb)) //video thumbnail is not yet created
                     {
                         this.Dispatcher.Invoke(() =>
@@ -7912,13 +7941,13 @@ namespace GymnasticsVideoGallery
             string dirPath = (dirName == ".") ? settings["SkillsPath"] : settings["SkillsPath"] + dirName + @"\";
             List<string> files = System.IO.Directory.GetFiles(dirPath).ToList<string>();
             files.Sort();
-            //Debug.Print("GenerateAllIndexesInFolder dirPath: " + dirPath + " files.Length: " + files.Length);
+            //Log("GenerateAllIndexesInFolder dirPath: " + dirPath + " files.Length: " + files.Length);
             foreach (string origFile in files)
             {
                 if (System.IO.Path.GetExtension(origFile).ToLower() == ".mp4")
                 {
                     string index = OrigToIndex(origFile);
-                    //Debug.Print("GenerateAllIndexesInFolder origFile: " + origFile + " index: " + index);
+                    //Log("GenerateAllIndexesInFolder origFile: " + origFile + " index: " + index);
                     if (!File.Exists(index)) //video thumbnail is not yet created
                     {
                         currentItemCount++;
@@ -7943,7 +7972,7 @@ namespace GymnasticsVideoGallery
                 if (System.IO.Path.GetExtension(origFile).ToLower() == ".mp4")
                 {
                     string index = OrigToIndex(origFile);
-                    //Debug.Print("GenerateSelectedIndexesProcess origFile: " + origFile + " index: " + index);
+                    //Log("GenerateSelectedIndexesProcess origFile: " + origFile + " index: " + index);
                     if (!File.Exists(index)) //video thumbnail is not yet created
                     {
                         currentItemCount++;
@@ -7987,7 +8016,7 @@ namespace GymnasticsVideoGallery
                     {
                         File.Delete(file);
                         i++;
-                        Debug.Print(i + " " + orig);
+                        Log(i + " " + orig);
                     }
                 }
                 string msg = i == 0 ? "No " : i.ToString() + " ";
