@@ -154,14 +154,33 @@ namespace GymnasticsVideoGallery
 
         public static void PerformImageResizeAndPutOnCanvas(string pFileName, int pWidth, int pHeight, string pOutputFileName)
         {
+            int exifOrientationID = 0x112;
 
-            System.Drawing.Image imgBef;
-            imgBef = System.Drawing.Image.FromFile(pFileName);
+            Image img = System.Drawing.Image.FromFile(pFileName);
 
+            if (img.PropertyIdList.Contains(exifOrientationID))
+            {
+                var prop = img.GetPropertyItem(0x112);
+                int val = BitConverter.ToUInt16(prop.Value, 0);
 
+                var rot = RotateFlipType.RotateNoneFlipNone;
+
+                if (val == 3 || val == 4)
+                    rot = RotateFlipType.Rotate180FlipNone;
+                else if (val == 5 || val == 6)
+                    rot = RotateFlipType.Rotate90FlipNone;
+                else if (val == 7 || val == 8)
+                    rot = RotateFlipType.Rotate270FlipNone;
+
+                if (val == 2 || val == 4 || val == 5 || val == 7)
+                    rot |= RotateFlipType.RotateNoneFlipX;
+
+                if (rot != RotateFlipType.RotateNoneFlipNone)
+                    img.RotateFlip(rot);
+            }            
+            
             System.Drawing.Image _imgR;
-            _imgR = Imager.Resize(imgBef, pWidth, pHeight, true);
-
+            _imgR = Imager.Resize(img, pWidth, pHeight, true);
 
             System.Drawing.Image _img2;
             _img2 = Imager.PutOnCanvas(_imgR, pWidth, pHeight, System.Drawing.Color.White);
