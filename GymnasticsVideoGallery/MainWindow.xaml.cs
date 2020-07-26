@@ -30,6 +30,8 @@ using System.Threading;
 using System.Collections.ObjectModel;
 using System.Drawing.Drawing2D;
 using MetadataExtractor;
+using Microsoft.WindowsAPICodePack.Shell;
+using Microsoft.WindowsAPICodePack.Shell.PropertySystem;
 
 namespace GymnasticsVideoGallery
 {
@@ -770,7 +772,7 @@ namespace GymnasticsVideoGallery
                 for (int i = 0; i < files.Length; i++)
                 {
                     string ext = System.IO.Path.GetExtension(files[i].ToString()).ToLower();
-                    if (ext == ".jpg" || ext == ".png" || ext == ".mp4")
+                    if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".mp4")
                     {
                         contents.Add(OrigToThumb(baseDir + files[i]));
                     }
@@ -1483,14 +1485,22 @@ namespace GymnasticsVideoGallery
                 string t = "";
                 if ((baseDir == rootDir + "Thumbnails") && IsThumbVideo(fileName) || isVideoFullscreen) //video internal or external
                 {
-                    if (baseDir == rootDir + "Thumbnails")
+                    if (baseDir == rootDir + "Thumbnails") //for external video, fileName is already the original
                     {
-                        fileName = ThumbToOrig(fileName);//for external video, fileName is already the original
+                        fileName = ThumbToOrig(fileName); 
                     }
                     
-                    t += "Video\n";
-                    t += fileName + "\n\n";
+                    t += "Video\n\n";
+                    t += fileName + "\n";
+
+                    FileInfo fileInfo = new FileInfo(fileName);
+                    double length = fileInfo.Length;
+                    double lengthMB = length / 1024 / 1024;
+                    t += "File size: " + lengthMB.ToString("0.#", CultureInfo.InvariantCulture) + " MB\n";
+                    t += "Date modified: " + fileInfo.LastWriteTime.ToString().Replace(".", ":") + "\n";
+
                     string[] arr = GetMediaInfo(fileName, "Video;%Duration%,%FrameRate_Mode%,%FrameRate%,%FrameCount%,%Width%,%Height%");
+                    t += "Resolution: " + arr[4] + " x " + arr[5] + "\n\n";
                     t += "Duration: ";
                     double durs = double.Parse(arr[0]) / 1000;
                     if (durs >= 3600)
@@ -1512,15 +1522,10 @@ namespace GymnasticsVideoGallery
                         t += sec.ToString() + " s ";
                     }
                     t += ((int)(durs * 1000)).ToString() + " ms\n";
-                    t += "Resolution: " + arr[4] + " x " + arr[5] + "\n";
                     t += "Frame rate mode: " + ((arr[1] == "CFR") ? "Constant" : "Variable") + "\n";
                     t += "Frame rate: " + arr[2] + " fps\n";
-                    t += "Frame count: " + arr[3] + " \n\n";
-                    FileInfo fileInfo = new FileInfo(fileName);
-                    double length = fileInfo.Length;
-                    double lengthMB = length / 1024 / 1024;
-                    t += "File size: " + lengthMB.ToString("0.#", CultureInfo.InvariantCulture) + " MB\n";
-                    t += "Date modified: " + fileInfo.LastWriteTime;
+                    t += "Frame count: " + arr[3];
+                    
                     //t += "Created: " + fileInfo.CreationTime + "\n";
                     //t += "Last accessed: " + fileInfo.LastAccessTime;
                 }
@@ -1529,18 +1534,14 @@ namespace GymnasticsVideoGallery
                     stw = new Stopwatch();
                     stw.Start();
 
-                    
-
                     if (baseDir == rootDir + "Thumbnails")
                     {
                         fileName = ThumbToOrig(fileName);
                     }
                     Log("Showinfo: " + fileName);
 
-                    t += "Picture\n";
+                    t += "Picture\n\n";
                     t += fileName + "\n";
-                    /*string[] arr = GetMediaInfo(fileName, "Image;%Width%,%Height%");
-                    t += "Resolution: " + arr[0] + " x " + arr[1] + "\n\n";*/
 
                     FileInfo fileInfo = new FileInfo(fileName);
                     double length = fileInfo.Length;
@@ -1574,6 +1575,7 @@ namespace GymnasticsVideoGallery
                     {
                         foreach (var tag in directory.Tags)
                         {
+                            Console.WriteLine("Exif: " + tag.Name);
                             switch (tag.Name)
                             {
                                 //case "Make":
@@ -1585,7 +1587,13 @@ namespace GymnasticsVideoGallery
                                     resY = int.Parse(tag.Description.Split(' ')[0]);
                                     break;
                                 case "Date/Time":
-                                    t += "Date taken: " + tag.Description.Split(' ')[0].Replace(':', '.') + " " + tag.Description.Split(' ')[1] + "\n";
+                                    Regex regex = new Regex(@"(\d+):(\d+):(\d+) (\d+):(\d+):(\d+)");
+                                    MatchCollection matches = regex.Matches(tag.Description);
+                                    foreach (Match match in matches)
+                                    {
+                                        GroupCollection groups = match.Groups;
+                                        t += "Date taken: " + groups[3] + "/" + groups[2] + "/" + groups[1] + " " + groups[4] + ":" + groups[5] + ":" + groups[6] + "\n";
+                                    }
                                     break;
                                 case "Exposure Time":
                                 case "F-Number":
@@ -1601,7 +1609,18 @@ namespace GymnasticsVideoGallery
                             //Log($"{directory.Name} - {tag.Name} = {tag.Description}");
                         }
                     }
-                    t += "Resolution: " + resX + " x " + resY + "\n\n" + t2;
+
+                    if (resX == 0 || resY == 0) //screenshots, no exif data
+                    {
+                        string[] arr = GetMediaInfo(fileName, "Image;%Width%,%Height%");
+                        
+                        t += "Date modified: " + fileInfo.LastWriteTime.ToString().Replace(".",":") + "\n";
+                        t += "Resolution: " + arr[0] + " x " + arr[1];
+                    }
+                    else
+                    {
+                        t += "Resolution: " + resX + " x " + resY + "\n\n" + t2.Substring(0, t2.Length-1); //remove last newline
+                    }                    
 
                     //----------------------
 
@@ -2391,19 +2410,37 @@ namespace GymnasticsVideoGallery
                                         else
                                         {
                                             BorderRect.Stroke = Brushes.Red;
-                                        }                                    
+                                        }
+
+                                        if (FileInfoGrid.Visibility == Visibility.Visible)
+                                        {
+                                            int tempCurrentPicIndex = currentPicIndex;
+                                            HideInfo(); //sets currentPicIndex
+                                            currentPicIndex = tempCurrentPicIndex;
+                                        }
                                     }
                                     else
                                     {
                                         BorderRect.Stroke = Brushes.Lime;
                                         selectedPicIndexes.Add(currentPicIndex);
+
+                                        if (FileInfoGrid.Visibility == Visibility.Visible)
+                                        {
+                                            Context_ShowInfo(null, null);
+                                        }
                                     }                  
                                 }
                                 else //last element was deleted, rectangle has to disappear.
                                 {
-                                    Log("hiding rect");
+                                    Log("Hiding rect");
                                     BorderRect.Visibility = Visibility.Hidden;
-                                    currentPicIndex = -1;                                    
+                                    if (FileInfoGrid.Visibility == Visibility.Visible)
+                                    {
+                                        int tempCurrentPicIndex = currentPicIndex;
+                                        HideInfo(); //sets currentPicIndex
+                                        currentPicIndex = tempCurrentPicIndex;
+                                    }
+                                    currentPicIndex = -1;
                                 }
                             }
                         }
@@ -3422,7 +3459,7 @@ namespace GymnasticsVideoGallery
             }
             else if (FileInfoGrid.Visibility == Visibility.Visible)
             {
-                if (e.Key != Key.Escape && e.Key != Key.Enter && e.Key != Key.Left && e.Key != Key.Right && e.Key != Key.Up && e.Key != Key.Down && e.Key != Key.PageUp && e.Key != Key.PageDown && e.Key != Key.Home && e.Key != Key.End && e.Key != Key.I && e.Key != Key.A)
+                if (e.Key != Key.Escape && e.Key != Key.Enter && e.Key != Key.Left && e.Key != Key.Right && e.Key != Key.Up && e.Key != Key.Down && e.Key != Key.PageUp && e.Key != Key.PageDown && e.Key != Key.Home && e.Key != Key.End && e.Key != Key.I && e.Key != Key.A && e.Key != Key.Delete)
                 {
                     return;
                 }
@@ -4935,11 +4972,6 @@ namespace GymnasticsVideoGallery
             {
                 Log("LoadVideo, fileName: " + fileName);
 
-                if (FileInfoGrid.Visibility == Visibility.Visible)
-                {
-                    Context_ShowInfo(null, null);
-                }
-
                 //Log("LoadVideo: ThumbScroll.ScrollableHeight: " + ThumbScroll.ScrollableHeight);
                 isPictureFullscreen = false;
                 ImageElement1.Source = null;
@@ -4989,6 +5021,11 @@ namespace GymnasticsVideoGallery
                 MediaElement1.IsMuted = false;
                 MediaElement1.Source = new Uri(videoSource, UriKind.Absolute);
                 MediaElement1.Play();
+
+                if (FileInfoGrid.Visibility == Visibility.Visible)
+                {
+                    Context_ShowInfo(null, null);
+                }
 
                 FilenameText.Text = System.IO.Path.GetFileName(videoSource);
                 FilenameText.UpdateLayout();
@@ -5076,6 +5113,7 @@ namespace GymnasticsVideoGallery
                     imageBitmap.Rotation = rot;
                 }               
             }
+            img.Dispose(); //image cannot be deleted without this call
 
             imageBitmap.EndInit();
             ImageElement1.Source = imageBitmap;
@@ -5158,8 +5196,41 @@ namespace GymnasticsVideoGallery
             isPlaying = true;
 
             //it is too early to call in loadvideo,  external videos will not show.
-            MediaElement1.Width = MainGrid.ActualWidth; //this.Actual... gives +14
-            MediaElement1.Height = MainGrid.ActualHeight;
+
+            Stopwatch stw0 = new Stopwatch();
+            stw0.Start();
+
+            ShellFile shell = ShellFile.FromFilePath(videoSource);
+            ShellProperty<ulong?> fs = shell.Properties.System.Size;
+
+            // workaround to find out if video in portrait or landscape
+            BitmapSource bs = shell.Thumbnail.BitmapSource;
+            double bsWidth = bs.Width;
+            double bsHeight = bs.Height;
+            //videoOrientation = bsWidth > bsHeight ? VideoOrientation.LANDSCAPE : VideoOrientation.PORTRAIT;
+
+            ShellProperty<uint?> fw = shell.Properties.System.Video.FrameWidth;
+            ShellProperty<uint?> fh = shell.Properties.System.Video.FrameHeight;
+
+            if (bsWidth < bsHeight && fw.Value > fh.Value) //portrait orientation
+            {
+                Log("Rotating video");
+                MediaElement1.Width = MainGrid.ActualHeight;
+                MediaElement1.Height = MainGrid.ActualWidth;
+                RotateTransform t = new RotateTransform(90);
+                MediaElement1.LayoutTransform = t;
+            }
+            else
+            {
+                Log("Normal orientation");
+                MediaElement1.Width = MainGrid.ActualWidth; //this.Actual... gives +14
+                MediaElement1.Height = MainGrid.ActualHeight;
+                RotateTransform t = new RotateTransform(0);
+                MediaElement1.LayoutTransform = t;
+            }
+
+            stw0.Stop();
+            Log("LoadVideo2 bsWidth " + bsWidth + " bsHeight " + bsHeight + " fw " + fw.Value + " fh " + fh.Value + " load time " + stw0.ElapsedMilliseconds);
 
             //Msgbox(MediaElement1.ActualWidth + " " + MediaElement1.ActualHeight);
 
@@ -5167,7 +5238,7 @@ namespace GymnasticsVideoGallery
             /*dialogActivation = true;
             Msgbox(MainGrid.ActualWidth + " " + MainGrid.ActualHeight + " " + this.ActualWidth + " " + this.ActualHeight);
             dialogActivation = false;*/
-            
+
             ButtonPlayPause.ToolTip = "Pause";
             ButtonPlayPause.Source = new BitmapImage(new Uri(resourceDir + "pause.png", UriKind.Absolute));
 
@@ -5243,6 +5314,7 @@ namespace GymnasticsVideoGallery
                 ExitPicture();
                 lastActualLeft = null;
                 lastActualTop = null;
+                actualSizeView = false;
             }
             if (FileInfoGrid.Visibility == Visibility.Visible)
             {
@@ -6039,16 +6111,21 @@ namespace GymnasticsVideoGallery
             {
                 fileName = rootDir + @"Thumbnails\" + System.IO.Path.GetFileNameWithoutExtension(fileName) + ".png";
             }
+            else if (System.IO.Path.GetExtension(fileName).ToLower() == ".jpg")
+            {
+                fileName = rootDir + @"Thumbnails\" + System.IO.Path.GetFileNameWithoutExtension(fileName) + ".jpg";
+            }
+            else if (System.IO.Path.GetExtension(fileName).ToLower() == ".jpeg")
+            {
+                fileName = rootDir + @"Thumbnails\" + System.IO.Path.GetFileNameWithoutExtension(fileName) + ".jpeg";
+            }
+            else if (System.IO.Path.GetExtension(fileName).ToLower() == ".mp4")
+            {
+                fileName = rootDir + @"Thumbnails\" + System.IO.Path.GetFileNameWithoutExtension(fileName) + settings["FileNameSeparator"] + "mp4.jpg";
+            }
             else
             {
-                if (System.IO.Path.GetExtension(fileName).ToLower() == ".jpg")
-                {
-                    fileName = rootDir + @"Thumbnails\" + System.IO.Path.GetFileNameWithoutExtension(fileName) + ".jpg";
-                }
-                else
-                {
-                    fileName = rootDir + @"Thumbnails\" + System.IO.Path.GetFileNameWithoutExtension(fileName) + settings["FileNameSeparator"] + "mp4.jpg";
-                }
+                return "";
             }
                     
             return fileName;
@@ -7719,6 +7796,12 @@ namespace GymnasticsVideoGallery
         {
             try
             {
+                /*Log("GenerateAllThumbs_Click threadThumb " + threadThumb);
+                if (threadThumb != null)
+                {
+                    Log("GenerateAllThumbs_Click threadThumb.isAlive " + threadThumb.IsAlive);
+                }*/
+
                 if (threadThumb != null && threadThumb.IsAlive || threadExt != null && threadExt.IsAlive) //thumb generation or frame extraction running.
                 {
                     dialogActivation = true;
@@ -7835,17 +7918,28 @@ namespace GymnasticsVideoGallery
                 //Log(dirPath + " " + files.Length);
                 foreach (string origFile in files)
                 {
-                    string thumb = OrigToThumb(origFile);
-                    //Log(origFile + " " + thumb);                    
-                    if (!File.Exists(thumb)) //video thumbnail is not yet created
+                    string ext = System.IO.Path.GetExtension(origFile).ToLower();
+                    if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".mp4")
                     {
-                        this.Dispatcher.Invoke(() =>
+                        string thumb = OrigToThumb(origFile);
+                        if (!File.Exists(thumb))
                         {
-                            StatusText.Text = "Creating thumbnail: " + dirName + @"\" + System.IO.Path.GetFileName(origFile);
-                        });
-                        string[] arr = GetMediaInfo(origFile, "Video;%Duration%");
-                        double middle = int.Parse(arr[0]) / 2;
-                        GetStillImage(origFile, middle, thumb);
+                            this.Dispatcher.Invoke(() =>
+                            {
+                                StatusText.Text = "Creating thumbnail: " + dirName + @"\" + System.IO.Path.GetFileName(origFile);
+                            });
+
+                            if (System.IO.Path.GetExtension(origFile).ToLower() == ".mp4")
+                            {
+                                string[] arr = GetMediaInfo(origFile, "Video;%Duration%");
+                                double middle = int.Parse(arr[0]) / 2;
+                                GetStillImage(origFile, middle, thumb);
+                            }
+                            else
+                            {
+                                Imager.PerformImageResizeAndPutOnCanvas(origFile, settings["ThumbW"], settings["ThumbH"], thumb);
+                            }
+                        }
                     }
                 }
             }

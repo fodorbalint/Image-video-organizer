@@ -183,7 +183,21 @@ namespace GymnasticsVideoGallery
             _imgR = Imager.Resize(img, pWidth, pHeight, true);
 
             System.Drawing.Image _img2;
-            _img2 = Imager.PutOnCanvas(_imgR, pWidth, pHeight, System.Drawing.Color.White);
+
+            int w;
+            int h;
+            if (img.Width/img.Height > pWidth/pHeight)
+            {
+                w = pWidth;
+                h = (int)((double)img.Height / img.Width * w); 
+            }
+            else
+            {
+                h = pHeight;
+                w = (int)((double)img.Width / img.Height * h);
+            }
+
+            _img2 = Imager.PutOnCanvas(_imgR, w, h, System.Drawing.Color.Transparent); //would be black, but it does not matter
 
             //Save JPEG  
             Imager.SaveJpeg(pOutputFileName, _img2);
