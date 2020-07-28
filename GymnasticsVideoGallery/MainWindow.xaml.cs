@@ -1454,9 +1454,23 @@ namespace GymnasticsVideoGallery
 
         private void Context_ShowInfo(object sender, RoutedEventArgs e)
         {
-            try
+            try //MetaDataExtractor.dll need to be present in the same directory
+            {
+                Context_ShowInfo2(sender, e);
+            }
+            catch (Exception ex)
+            {
+                Msgbox("Error: " + ex.Message + " " + ex.StackTrace);
+                Log("Error: " + ex.Message + " " + ex.StackTrace);
+            }
+        }
+
+        private void Context_ShowInfo2(object sender, RoutedEventArgs e)
+        {
+            try //does not stop crashing the program when MetadataExtractor is missing
             {
                 Log("Context_ShowInfo");
+
                 int index = (contextItemIndex != -1) ? contextItemIndex : currentPicIndex;
                 string baseDir, fileName;
                 Image im = null;
@@ -1646,8 +1660,8 @@ namespace GymnasticsVideoGallery
             }
             catch (Exception ex)
             {
-                FileInfoText.Text = ex.Message + " " + ex.StackTrace;
-                FileInfoGrid.Visibility = Visibility.Visible;
+                Msgbox("Error: " + ex.Message + " " + ex.StackTrace);
+                Log("Error: " + ex.Message + " " + ex.StackTrace);
             }
         }
 
@@ -4291,6 +4305,7 @@ namespace GymnasticsVideoGallery
                         e.Handled = true;
                     }
                     break;
+
                 case Key.F7: //changes fullscreen state in thumbnail and settings view
                     if (!isVideoFullscreen && !isPictureFullscreen && !settingsPageOpen && System.IO.Directory.Exists(settings["SkillsPath"])) //no exit fullscreen in view mode.
                     {
@@ -5186,10 +5201,23 @@ namespace GymnasticsVideoGallery
 
         private void MediaElement1_MediaOpened(object sender, EventArgs e)
         {
+            try //Microsoft.WindowsAPICodePack.Shell.dll and Microsoft.WindowsAPICodePack.dll need to be present in the same directory as the program
+            {
+                MediaElement1_MediaOpened2(sender, e);
+            }
+            catch (Exception ex)
+            {
+                Msgbox("Error: " + ex.Message + " " + ex.StackTrace);
+                Log("Error: " + ex.Message + " " + ex.StackTrace);
+            }
+        }
+
+        private void MediaElement1_MediaOpened2(object sender, EventArgs e)
+        {
             if (addFramesLater)
             {
                 addFramesLater = false;
-                AddFrames();    
+                AddFrames();
             }
             //Log("mediaopened");
             videoLoaded = true;
@@ -5232,13 +5260,6 @@ namespace GymnasticsVideoGallery
             stw0.Stop();
             Log("LoadVideo2 bsWidth " + bsWidth + " bsHeight " + bsHeight + " fw " + fw.Value + " fh " + fh.Value + " load time " + stw0.ElapsedMilliseconds);
 
-            //Msgbox(MediaElement1.ActualWidth + " " + MediaElement1.ActualHeight);
-
-            //when opening a video by itself, the Actual dimensions are 0 at the time of LoadVideo()
-            /*dialogActivation = true;
-            Msgbox(MainGrid.ActualWidth + " " + MainGrid.ActualHeight + " " + this.ActualWidth + " " + this.ActualHeight);
-            dialogActivation = false;*/
-
             ButtonPlayPause.ToolTip = "Pause";
             ButtonPlayPause.Source = new BitmapImage(new Uri(resourceDir + "pause.png", UriKind.Absolute));
 
@@ -5262,7 +5283,6 @@ namespace GymnasticsVideoGallery
 
             stw = new Stopwatch();
             stw.Start(); //no cursor is shown within the first 500 ms, even if it moved.
-
         }
 
         private void MediaElement1_MediaEnded(object sender, EventArgs e) // When the media playback is finished. Stop() the media to seek to media start.

@@ -281,6 +281,7 @@
             <MediaElement x:Name="MediaElement1" ScrubbingEnabled="True" ContextMenuOpening="MediaElement1_ContextMenuOpening" ContextMenuClosing="MediaElement1_ContextMenuClosing" MediaOpened="MediaElement1_MediaOpened" MediaEnded="MediaElement1_MediaEnded" UnloadedBehavior="Manual" LoadedBehavior="Manual">
                 <MediaElement.ContextMenu>
                     <ContextMenu>
+                        <MenuItem Header="Show info" Click="Context_ShowInfo" />
                         <MenuItem x:Name="MarkPosition" Header="Mark position" Click="MarkPosition_Click" />
                         <MenuItem x:Name="SetThumbnail" Header="Set thumbnail" Click="SetThumbnail_Click" />
                         <MenuItem x:Name="VideoMenuItemExtract" Header="" Click="ExtractShow_Click" />
@@ -308,6 +309,7 @@
         <Grid x:Name="VideoControlGrid" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Visibility="Hidden" ContextMenuOpening="MediaElement1_ContextMenuOpening" ContextMenuClosing="MediaElement1_ContextMenuClosing" >
             <Grid.ContextMenu>
                 <ContextMenu>
+                    <MenuItem Header="Show info" Click="Context_ShowInfo" />
                     <MenuItem x:Name="MarkPosition2" Header="Mark position" Click="MarkPosition_Click" />
                     <MenuItem x:Name="SetThumbnail2" Header="Set thumbnail" Click="SetThumbnail_Click" />
                     <MenuItem x:Name="VideoMenuItemExtract2" Header="" Click="ExtractShow_Click" />
