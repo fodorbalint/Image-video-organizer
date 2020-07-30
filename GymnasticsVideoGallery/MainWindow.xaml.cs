@@ -531,16 +531,28 @@ namespace GymnasticsVideoGallery
                 if (contextItemIndex == -1) //when the menu is open, no mousemove registers, but we need to prevent that we click the bottom of an image, the menu opens, we select show info, and the picture below will show its filename without moving the mouse.
                 {
                     //Log("Thumbs_MouseMove sender: " + sender + ", e.Source: " + e.Source);
+                    /*The followings can register when we are over a thumbnail
+                    System.Windows.Controls.WrapPanel, e.Source: System.Windows.Controls.Image
+                    System.Windows.Controls.WrapPanel, e.Source: System.Windows.Controls.Border
+                    System.Windows.Controls.WrapPanel, e.Source: System.Windows.Controls.Grid */
                     var obj = (e.Source != null) ? e.Source : sender; //the latter case occurs, when we got here from the finish of UpdateThumbs.
-                    //if (!(e.Source is Border)) //can be Image, or nothing when we activate the window.
-                    if (obj is Image)
+
+                    if (obj is Image || obj is Grid)
                     {
                         if (currentThumbIndex != -2) //after drag to other folder, Thumbs_MouseMove is called, and e.Source is still the image that was just removed.
                                                      //thumbIndex is -1, but do not change, when we copied the file. CurrentThumbIndex will be changed now.
                         {
-                            Image im = (Image)obj;
-                            Border b = (Border)im.Parent;
-                            int thumbIndex = Thumbs.Children.IndexOf(b);
+                            Grid g;
+                            if (obj is Image)
+                            {
+                                g = GetGridFromImage((Image)obj);
+                            }
+                            else
+                            {
+                                g = (Grid)obj;
+                            }
+                            Image im = GetImageFromGrid(g);
+                            int thumbIndex = Thumbs.Children.IndexOf(g);
                             FileNameGrid.Visibility = Visibility.Visible; 
                             PositionLabel(thumbIndex, im.Source.ToString());
                             CommentGrid.Margin = new Thickness(e.GetPosition(ThumbScroll).X + 10, e.GetPosition(ThumbScroll).Y + 10, 0, 0);
@@ -903,7 +915,7 @@ namespace GymnasticsVideoGallery
                         Log("Updatethumbs refreshes filename label currentThumbIndex " + currentThumbIndex);
                         int oldCurrentThubmIndex = currentThumbIndex;
                         currentThumbIndex = -1; //so the filename label appears correct under the mouse, if pictures were added outside program 
-                        Thumbs_MouseMove(((Border)Thumbs.Children[oldCurrentThubmIndex]).Child, new System.Windows.Input.MouseEventArgs(Mouse.PrimaryDevice, 0));
+                        Thumbs_MouseMove(GetImageFromGrid((Grid)Thumbs.Children[oldCurrentThubmIndex]), new System.Windows.Input.MouseEventArgs(Mouse.PrimaryDevice, 0));
                     }
                     
                     
@@ -944,20 +956,24 @@ namespace GymnasticsVideoGallery
                     imageBitmap.UriSource = new Uri(src, UriKind.Absolute);
                     imageBitmap.EndInit();
 
+                    Grid imageGrid = new Grid();
+                    imageGrid.Width = thumbW + 1;
+                    imageGrid.Height = thumbH + 1;
+                    imageGrid.Background = Brushes.Transparent; //background must be set in order for the click to register
+                    imageGrid.MouseLeftButtonDown += Im_MouseLeftButtonDown;
+                    imageGrid.MouseLeftButtonUp += Im_MouseLeftButtonUp;
+                    imageGrid.MouseMove += Im_MouseMove;
+
                     var im = new Image();
                     im.Width = thumbW;
                     im.Height = thumbH;
-
                     im.Source = imageBitmap;
-                    im.MouseLeftButtonDown += Im_MouseLeftButtonDown;
-                    im.MouseLeftButtonUp += Im_MouseLeftButtonUp;                    
-                    im.MouseMove += Im_MouseMove;
-                    //im.Margin = new Thickness(1);
-
+                    
                     var b = new Border();
                     b.BorderThickness = new Thickness(0, 0, 1, 1);
                     b.BorderBrush = Brushes.LightGray;
                     b.Child = im;
+                    imageGrid.Children.Add(b);
 
                     //for the allfilename label and selection rectangle, image size used for positioning 
                     Grid g = new Grid();
@@ -1009,7 +1025,8 @@ namespace GymnasticsVideoGallery
                     //Log("CreateThumb: index: " + index + ", displayedThumbs.Count: " + displayedThumbs.Count);                    
 
                     displayedThumbs.Insert(index, src);
-                    Thumbs.Children.Insert(index, b);
+                    //Thumbs.Children.Insert(index, b);
+                    Thumbs.Children.Insert(index, imageGrid);
                     FileNameGridAllCanvas.Children.Insert(index, g);
                     for (int ix = 0; ix < selectedPicIndexes.Count; ix++) //step +1 every selected item that is greater or equal than the added index
                     {
@@ -1024,13 +1041,25 @@ namespace GymnasticsVideoGallery
                     Log(e.Message + " " + e.StackTrace);
                 }
             });
-        }        
+        }  
+        
+        private Image GetImageFromGrid(Grid g)
+        {
+            return (Image)((Border)g.Children[0]).Child;
+        }
+
+        private Grid GetGridFromImage(Image i)
+        {
+            return (Grid)((Border)i.Parent).Parent;
+        }
 
         private void Im_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             //we don't set selection here, because this is where dragging takes place.
             Log("Im_MouseLeftButtonDown");
-            Image i = (Image)sender;
+            Grid g = (Grid)sender;
+            Image i = GetImageFromGrid(g);
+            Log("Im_MouseLeftButtonDown i " + i.ActualWidth + " " + i.ActualHeight + " " + i.Width + " " + i.Height + " " + g.ActualWidth + " " + g.ActualHeight + " " + g.Width + " " + g.Height);
             imageDownFileName = new Uri(i.Source.ToString()).LocalPath;
         }
 
@@ -1041,8 +1070,7 @@ namespace GymnasticsVideoGallery
             if (noContentLoad) return;
             //if (windowActivatingTimer != null || (threadThumb != null && threadThumb.IsAlive)) return; //for cases where a file is renamed outside of program.
             // when clicking on that file, it disappears, and the next file will be loaded.
-            Image i = (Image)sender;
-            int index = Thumbs.Children.IndexOf((Border)i.Parent);
+            int index = Thumbs.Children.IndexOf((Grid)sender);
 
             if (index == -1) return; //renaming dir outside of program, and activating the window by clicking on a thumbnail. sender image is already removed.
 
@@ -1065,7 +1093,7 @@ namespace GymnasticsVideoGallery
                 PositionBorderRect(currentPicIndex, true);
                 BorderRect.Visibility = Visibility.Visible;
 
-                LoadContent(((Border)Thumbs.Children[currentPicIndex]).Child, null);
+                LoadContent(GetImageFromGrid((Grid)Thumbs.Children[currentPicIndex]), null);
             }
         }
 
@@ -1073,7 +1101,7 @@ namespace GymnasticsVideoGallery
         {            
             if (e.LeftButton == MouseButtonState.Pressed)
             {
-                Image i = (Image)sender;
+                Image i = GetImageFromGrid((Grid)sender);
                 //for cases where a file is renamed outside of program. We return to the program by clicking on that thumbnail,
                 //but it is deleted soon, and selection goes to next thumbnail.
                 //Also when adding / deleting files before the selected position.
@@ -1097,7 +1125,7 @@ namespace GymnasticsVideoGallery
                     }
                     else
                     {
-                        int index = Thumbs.Children.IndexOf((Border)i.Parent);
+                        int index = Thumbs.Children.IndexOf((Grid)sender);
                         selectedPicIndexes.Clear();
                         if (SelectMultiple(index)) //cannot return false now
                         {
@@ -1388,8 +1416,8 @@ namespace GymnasticsVideoGallery
             selectedPicIndexes.Sort();
             foreach (int index in selectedPicIndexes)
             {
-                Border b = (Border)Thumbs.Children[index];
-                Image im = (Image)b.Child;
+                Grid g = (Grid)Thumbs.Children[index];
+                Image im = GetImageFromGrid(g);
                 string fileName = new Uri(im.Source.ToString()).LocalPath;
                 string origFile = ThumbToOrig(fileName);
                 //lThumb.Add(fileName);
@@ -1417,8 +1445,8 @@ namespace GymnasticsVideoGallery
             if (e.Source is Image)
             {
                 Image im = (Image)e.Source;
-                Border b = (Border)im.Parent;
-                contextItemIndex = Thumbs.Children.IndexOf(b);
+                Grid g = GetGridFromImage(im);
+                contextItemIndex = Thumbs.Children.IndexOf(g);
                 string thumbPath = new Uri(im.Source.ToString()).LocalPath;
                 if (IsThumbVideo(thumbPath)) //video
                 {
@@ -1490,8 +1518,8 @@ namespace GymnasticsVideoGallery
                 }
                 else
                 {
-                    Border b = (Border)Thumbs.Children[index];
-                    im = (Image)b.Child;
+                    Grid g = (Grid)Thumbs.Children[index];
+                    im = GetImageFromGrid(g);
                     fileName = new Uri(im.Source.ToString()).LocalPath;
                     baseDir = System.IO.Path.GetDirectoryName(fileName);
                 }
@@ -1703,8 +1731,8 @@ namespace GymnasticsVideoGallery
             //handle clicking away events, like clicking on a video, and mouseover event too.
             renameContextItemIndex = (contextItemIndex != -1) ? contextItemIndex : currentPicIndex;
             Log(" Rename_Click index " + renameContextItemIndex);
-            Border b = (Border)Thumbs.Children[renameContextItemIndex];
-            Image im = (Image)b.Child;
+            Grid g = (Grid)Thumbs.Children[renameContextItemIndex];
+            Image im = GetImageFromGrid(g);
             PositionLabel(renameContextItemIndex, im.Source.ToString()); //when pressing key to rename image, the mouse might be over another image
 
             thumbsMouseEnabledThumb = false;
@@ -1757,7 +1785,7 @@ namespace GymnasticsVideoGallery
                 else //thumbnail view
                 {
                     int i = (contextItemIndex != -1) ? contextItemIndex : currentPicIndex;//it will be reset, when the messagebox appears.
-                    fileName = new Uri(((Image)((Border)Thumbs.Children[i]).Child).Source.ToString()).LocalPath;
+                    fileName = new Uri(GetImageFromGrid((Grid)Thumbs.Children[i]).Source.ToString()).LocalPath;
                     if (IsThumbVideo(fileName)) //video
                     {
                         type = "video";
@@ -2105,7 +2133,7 @@ namespace GymnasticsVideoGallery
                     {
                         for (int i = 0; i < Thumbs.Children.Count; i++) //show check mark
                         {
-                            Image im = (Image)((Border)Thumbs.Children[i]).Child;
+                            Image im = GetImageFromGrid((Grid)Thumbs.Children[i]);
                             BitmapImage bit = (BitmapImage)im.Source;
                             if (ThumbToOrig(bit.UriSource.LocalPath) == extVideoSource)
                             {
@@ -2169,7 +2197,7 @@ namespace GymnasticsVideoGallery
                                     }
                                     File.Move(origFile, newFile);
 
-                                    Image im = (Image)((Border)Thumbs.Children[renameContextItemIndex]).Child;
+                                    Image im = GetImageFromGrid((Grid)Thumbs.Children[renameContextItemIndex]);
                                     BitmapImage imageBitmap = new BitmapImage();
                                     imageBitmap.BeginInit();
                                     imageBitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
@@ -2223,7 +2251,7 @@ namespace GymnasticsVideoGallery
                                         File.Move(comment_orig, comment_new);
                                     }
 
-                                    Image im = (Image)((Border)Thumbs.Children[renameContextItemIndex]).Child;
+                                    Image im = GetImageFromGrid((Grid)Thumbs.Children[renameContextItemIndex]);
                                     BitmapImage imageBitmap = new BitmapImage();
                                     imageBitmap.BeginInit();
                                     imageBitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
@@ -2251,7 +2279,7 @@ namespace GymnasticsVideoGallery
                                 File.Move(origFile, newFile);
                                 File.Move(OrigToThumb(origFile), OrigToThumb(newFile));
 
-                                Image im = (Image)((Border)Thumbs.Children[renameContextItemIndex]).Child;
+                                Image im = GetImageFromGrid((Grid)Thumbs.Children[renameContextItemIndex]);
                                 BitmapImage imageBitmap = new BitmapImage();
                                 imageBitmap.BeginInit();
                                 imageBitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
@@ -2296,7 +2324,7 @@ namespace GymnasticsVideoGallery
                                     File.Move(comment_orig, comment_new);
                                 }
 
-                                Image im = (Image)((Border)Thumbs.Children[renameContextItemIndex]).Child;
+                                Image im = GetImageFromGrid((Grid)Thumbs.Children[renameContextItemIndex]);
                                 BitmapImage imageBitmap = new BitmapImage();
                                 imageBitmap.BeginInit();
                                 imageBitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
@@ -2340,7 +2368,6 @@ namespace GymnasticsVideoGallery
 
         private void CloseRenameField(bool updateText)
         {
-            Log("CloseRenameField");
             if (updateText)
             {
                 FileNameLabelText.Text = FileRenameText.Text;
@@ -2352,10 +2379,20 @@ namespace GymnasticsVideoGallery
             //hide only if the mouse is not over the image that was renamed
             HitTestResult result = VisualTreeHelper.HitTest(ThumbScroll,Mouse.GetPosition(ThumbScroll));
 
-            Log("CloseRenameField " + result.VisualHit);
-            if (result.VisualHit is Image)
+            Log("CloseRenameField result.VisualHit " + result.VisualHit);
+            object obj = result.VisualHit;
+            if (obj is Image || obj is Grid)
             {
-                int index = Thumbs.Children.IndexOf((Border)((Image)result.VisualHit).Parent);
+                Grid g;
+                if (obj is Image)
+                {
+                    g = GetGridFromImage((Image)obj);
+                }
+                else
+                {
+                    g = (Grid)obj;
+                }
+                int index = Thumbs.Children.IndexOf(g);
                 if (renameContextItemIndex != index)
                 {
                     FileNameGrid.Visibility = Visibility.Hidden;
@@ -2376,7 +2413,7 @@ namespace GymnasticsVideoGallery
             Log("RemoveThumb fileName " + thumbName + " currentPicIndex " + currentPicIndex);
             for (int i = 0; i < Thumbs.Children.Count; i++) //takes 160/10000 ms to cycle through 39 elements
             {
-                Image im = (Image)((Border)Thumbs.Children[i]).Child;
+                Image im = GetImageFromGrid((Grid)Thumbs.Children[i]);
                 BitmapImage bit = (BitmapImage)im.Source;
                 //Log(ThumbToOrig(bit.UriSource.LocalPath));
                 if (bit.UriSource.LocalPath == thumbName)
@@ -2470,7 +2507,7 @@ namespace GymnasticsVideoGallery
         {
             for (int i = 0; i < Thumbs.Children.Count; i++)
             {
-                Image im = (Image)((Border)Thumbs.Children[i]).Child;
+                Image im = GetImageFromGrid((Grid)Thumbs.Children[i]);
                 BitmapImage bit = (BitmapImage)im.Source;
                 if (bit.UriSource.LocalPath == fileName)
                 {
@@ -3231,7 +3268,7 @@ namespace GymnasticsVideoGallery
                     {
                         ExitPicture();
                     }
-                    LoadContent(((Border)Thumbs.Children[currentPicIndex]).Child, new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, DateTime.Now.Millisecond));
+                    LoadContent(GetImageFromGrid((Grid)Thumbs.Children[currentPicIndex]), new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, DateTime.Now.Millisecond));
                 }
                 else //exit video/picture view
                 {
@@ -3308,7 +3345,7 @@ namespace GymnasticsVideoGallery
                         ExitPicture();
                     }
                     Log("NextContent loading content " + currentPicIndex);
-                    LoadContent(((Border)Thumbs.Children[currentPicIndex]).Child, new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, DateTime.Now.Millisecond));
+                    LoadContent(GetImageFromGrid((Grid)Thumbs.Children[currentPicIndex]), new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, DateTime.Now.Millisecond));
                     Log("NextContent content loaded " + currentPicIndex);
                 }
                 else //exit video/picture view
@@ -3741,7 +3778,7 @@ namespace GymnasticsVideoGallery
                     }
                     else if (isPictureFullscreen) //previous media or move picture. Pressing shift will switch media.
                     {
-                        if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                        if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) || Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
                         {
                             if (Math.Round(ImageElement1.ActualWidth) > Math.Round(MainGrid.ActualWidth) || Math.Round(ImageElement1.ActualHeight) > Math.Round(MainGrid.ActualHeight)) //if in actualSizeView, and the image is larger than the screen
                             {
@@ -3872,7 +3909,7 @@ namespace GymnasticsVideoGallery
                     }
                     else if (isPictureFullscreen) //next media or move picture. Pressing shift will switch media.
                     {
-                        if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+                        if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl) || Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
                         {
                             if (Math.Round(ImageElement1.ActualWidth) > Math.Round(MainGrid.ActualWidth) || Math.Round(ImageElement1.ActualHeight) > Math.Round(MainGrid.ActualHeight)) //if in actualSizeView, and the image is larger than the screen
                             {
@@ -4035,7 +4072,7 @@ namespace GymnasticsVideoGallery
                         element = FocusManager.GetFocusedElement(this);
                         if (element == ThumbScroll)
                         {
-                            LoadContent(((Border)Thumbs.Children[currentPicIndex]).Child, null);
+                            LoadContent(GetImageFromGrid((Grid)Thumbs.Children[currentPicIndex]), null);
                             e.Handled = true;
                         }
                     }
@@ -4782,7 +4819,7 @@ namespace GymnasticsVideoGallery
                 double oldScrollHeight = (initScrollHeight == -1) ? ThumbScroll.ScrollableHeight : initScrollHeight;
                 for (int i = 0; i < Thumbs.Children.Count; i++) //takes 160/10000 ms to cycle through 39 elements
                 {
-                    Image im = (Image)((Border)Thumbs.Children[i]).Child;
+                    Image im = GetImageFromGrid((Grid)Thumbs.Children[i]);
                     im.Width = thumbW;
                     im.Height = thumbH;
                 }
@@ -4981,7 +5018,7 @@ namespace GymnasticsVideoGallery
             }
         }
 
-        private void LoadVideo(String fileName)
+        private void LoadVideo(string fileName)
         {
             try
             {
@@ -6432,7 +6469,7 @@ namespace GymnasticsVideoGallery
                 displayedThumbs.Clear();
                 for (int i = 0; i < Thumbs.Children.Count; i++)
                 {
-                    Image im = (Image)((Border)Thumbs.Children[i]).Child;
+                    Image im = GetImageFromGrid((Grid)Thumbs.Children[i]);
                     string oldSource = ((BitmapImage)im.Source).UriSource.LocalPath;
                     if (oldSource.IndexOf(rootDir + @"Thumbnails\") != -1) //if it is a video, not a picture
                     {
@@ -6546,7 +6583,7 @@ namespace GymnasticsVideoGallery
                 //update pictures
                 for (int i = 0; i < Thumbs.Children.Count; i++)
                 {
-                    Image im = (Image)((Border)Thumbs.Children[i]).Child;
+                    Image im = GetImageFromGrid((Grid)Thumbs.Children[i]);
                     im.Width = thumbW;
                     im.Height = thumbH;
                 }
@@ -7225,7 +7262,7 @@ namespace GymnasticsVideoGallery
             displayedThumbs.Clear();
             for (int i = 0; i < Thumbs.Children.Count; i++) //43 pics 2096, 1543, 1305, 1253 ms
             {
-                Image im = (Image)((Border)Thumbs.Children[i]).Child;
+                Image im = GetImageFromGrid((Grid)Thumbs.Children[i]);
                 string oldSource = ((BitmapImage)im.Source).UriSource.LocalPath;
                 string newSource;
                 if (oldSource.IndexOf(rootDir + @"Thumbnails\") != -1) //video
@@ -7761,7 +7798,7 @@ namespace GymnasticsVideoGallery
             // ThumbScroll.Focusable = false;
         }
 
-        private void UnselectAll_Click(object sender, RoutedEventArgs e)
+       private void UnselectAll_Click(object sender, RoutedEventArgs e)
         {
             BorderRect.Visibility = Visibility.Hidden;
             BorderRect.Stroke = Brushes.Lime;
@@ -7860,7 +7897,7 @@ namespace GymnasticsVideoGallery
                 SaveSetting("ShowExtractStatus", true);
                 for (int i = 0; i < FileNameGridAllCanvas.Children.Count; i++)
                 {
-                    Image im = (Image)((Border)Thumbs.Children[i]).Child;
+                    Image im = GetImageFromGrid((Grid)Thumbs.Children[i]);
                     BitmapImage bit = (BitmapImage)im.Source;
                     if (File.Exists(OrigToIndex(ThumbToOrig(bit.UriSource.LocalPath))))
                     {
