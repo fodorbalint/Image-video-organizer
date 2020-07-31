@@ -1609,8 +1609,7 @@ namespace GymnasticsVideoGallery
                     //------------- slow at first run, otherwise fast
 
                     string t2 = "";
-                    int resX = 0;
-                    int resY = 0;
+                    string dateString = "";
 
                     var directories = ImageMetadataReader.ReadMetadata(fileName);
                     foreach (var directory in directories)
@@ -1622,19 +1621,14 @@ namespace GymnasticsVideoGallery
                             {
                                 //case "Make":
                                 //case "Model":
-                                case "Exif Image Width":
-                                    resX = int.Parse(tag.Description.Split(' ')[0]);
-                                    break;
-                                case "Exif Image Height":
-                                    resY = int.Parse(tag.Description.Split(' ')[0]);
-                                    break;
                                 case "Date/Time":
                                     Regex regex = new Regex(@"(\d+):(\d+):(\d+) (\d+):(\d+):(\d+)");
                                     MatchCollection matches = regex.Matches(tag.Description);
                                     foreach (Match match in matches)
                                     {
                                         GroupCollection groups = match.Groups;
-                                        t += "Date taken: " + groups[3] + "/" + groups[2] + "/" + groups[1] + " " + groups[4] + ":" + groups[5] + ":" + groups[6] + "\n";
+                                        dateString = "Date taken: " + groups[3] + "/" + groups[2] + "/" + groups[1] + " " + groups[4] + ":" + groups[5] + ":" + groups[6] + "\n";
+                                        t += dateString;
                                     }
                                     break;
                                 case "Exposure Time":
@@ -1652,17 +1646,17 @@ namespace GymnasticsVideoGallery
                         }
                     }
 
-                    if (resX == 0 || resY == 0) //screenshots, no exif data
+                    string[] arr = GetMediaInfo(fileName, "Image;%Width%,%Height%"); //Exif Image Width is not reliable, for example with OnePlus 7T photos
+                    if (dateString == "")
                     {
-                        string[] arr = GetMediaInfo(fileName, "Image;%Width%,%Height%");
-                        
-                        t += "Date modified: " + fileInfo.LastWriteTime.ToString().Replace(".",":") + "\n";
-                        t += "Resolution: " + arr[0] + " x " + arr[1];
+                        t += "Date modified: " + fileInfo.LastWriteTime.ToString().Replace(".", ":") + "\n";
                     }
-                    else
+                    t += "Resolution: " + arr[0] + " x " + arr[1];
+
+                    if (t2 != "")
                     {
-                        t += "Resolution: " + resX + " x " + resY + "\n\n" + t2.Substring(0, t2.Length-1); //remove last newline
-                    }                    
+                        t += "\n\n" + t2.Substring(0, t2.Length - 1); //remove last newline
+                    }                   
 
                     //----------------------
 
@@ -4811,6 +4805,7 @@ namespace GymnasticsVideoGallery
             //do not resize the thumbnails, when: - the thumbs have finished loading - the scroll container changes size
             if (!changedByProgramThumbs)
             {
+                //Math.Round cannot be used, as then the thumbnails would exceed the available width
                 thumbW = settings["ThumbW"] = (int)(availWidth / ThumbSizeSlider.Value - 1); //-1 is for the border
                 thumbH = settings["ThumbH"] = (int)((availWidth / ThumbSizeSlider.Value - 1) * 9 / 16);
                 
@@ -4819,7 +4814,10 @@ namespace GymnasticsVideoGallery
                 double oldScrollHeight = (initScrollHeight == -1) ? ThumbScroll.ScrollableHeight : initScrollHeight;
                 for (int i = 0; i < Thumbs.Children.Count; i++) //takes 160/10000 ms to cycle through 39 elements
                 {
-                    Image im = GetImageFromGrid((Grid)Thumbs.Children[i]);
+                    Grid g = (Grid)Thumbs.Children[i];
+                    g.Width = thumbW + 1;
+                    g.Height = thumbH + 1;
+                    Image im = GetImageFromGrid(g);
                     im.Width = thumbW;
                     im.Height = thumbH;
                 }
@@ -6751,8 +6749,6 @@ namespace GymnasticsVideoGallery
 
         private void StartFullScreen_Set() //takes into account all 3 checkboxes to determine which fields should be disabled.
         {
-            if (changedByProgramSettings) return;
-
             Log("StartFullScreen_Set");
             if ((bool)SettingStartFullScreen.IsChecked)
             {
