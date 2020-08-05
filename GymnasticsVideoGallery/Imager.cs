@@ -186,20 +186,20 @@ namespace GymnasticsVideoGallery
 
             int w;
             int h;
-            if (img.Height/img.Width > pHeight/pWidth)
+            if ((double)img.Height/img.Width > pHeight/pWidth)
             {
-                //Console.WriteLine("img is taller");
+                Console.WriteLine("img is taller");
                 h = pHeight;
                 w = (int)Math.Round((double)img.Width / img.Height * h); 
             }
             else
             {
-                //Console.WriteLine("img is wider");
+                Console.WriteLine("img is wider");
                 w = pWidth;
                 h = (int)Math.Round((double)img.Height / img.Width * w);
             }
 
-            //Console.WriteLine("PerformImageResizeAndPutOnCanvas h " + ((double)img.Height / img.Width * pWidth) + " w " + ((double)img.Width / img.Height * pHeight) +  " w " + w + " h " + h + " pWidth " + pWidth + " pHeight " + pHeight + " img.Width " + img.Width + " img.Height " + img.Height);
+            Console.WriteLine("PerformImageResizeAndPutOnCanvas h " + ((double)img.Height / img.Width * pWidth) + " w " + ((double)img.Width / img.Height * pHeight) +  " w " + w + " h " + h + " pWidth " + pWidth + " pHeight " + pHeight + " img.Width " + img.Width + " img.Height " + img.Height);
 
             _img2 = Imager.PutOnCanvas(_imgR, w, h, System.Drawing.Color.Gray); //would be black, but it does not matter
 

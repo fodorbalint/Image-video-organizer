@@ -1,4 +1,16 @@
 # Changelog
+Version 20.1.1, 2020 August 5.
+
+Changed:
+- Shift + arrows will move the enlarged image in the screen.
+- If a thumbnail has different ratio to 16:9, the empty area on the sides will register mouse clicks and movements.
+ 
+Fixed:
+- If a thumbnail's height/width ratio is greater than 9:16, extra space is created above it when being generated.
+- When changing thumbnail size, the grids of the thumbnails remain the same size
+- When showing info, incorrect image resolution appears on pictures made with certain devices.
+- When opening settings, and the window is set to full screen, the other options are not disabled.
+
 Version 20.1.0, 2020 July 28.
 
 New:
