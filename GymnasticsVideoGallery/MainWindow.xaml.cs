@@ -1647,11 +1647,20 @@ namespace GymnasticsVideoGallery
                     }
 
                     string[] arr = GetMediaInfo(fileName, "Image;%Width%,%Height%"); //Exif Image Width is not reliable, for example with OnePlus 7T photos
+
                     if (dateString == "")
                     {
                         t += "Date modified: " + fileInfo.LastWriteTime.ToString().Replace(".", ":") + "\n";
                     }
-                    t += "Resolution: " + arr[0] + " x " + arr[1];
+                    //at some pictures (panasonic 308 and 312) the info cannot not be extracted, with arr.Length being 1, and the first element being null.
+                    if (arr.Length == 2)
+                    {
+                        t += "Resolution: " + arr[0] + " x " + arr[1];
+                    }
+                    else
+                    {
+                        t += "Resolution unavailable";
+                    }                    
 
                     if (t2 != "")
                     {
